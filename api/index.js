@@ -6,6 +6,7 @@ const app = express();
 // Register the routers
 const loginRouter = require("./rest/login.rest");
 const jobRouter = require("./rest/job.rest");
+const userRouter = require("./rest/user.rest");
 
 // Middleware to authenticate JWT tokens
 const jwtMiddleware = require("./middleware/authmiddleware");
@@ -18,7 +19,7 @@ app.use(express.json());
 // use the routers
 app.use("/login", jwtMiddleware(), loginRouter);
 app.use("/job", jwtMiddleware(), jobRouter);
-
+app.use("/user", userRouter);
 // health check
 app.get("/sync", (req, res) => {
   try {
