@@ -1,0 +1,25 @@
+{
+  "name": "queuecraft",
+  "version": "1.0.0",
+  "description": "Distributed Task Queue & Job Processor",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swstk125/queuecraft.git"
+  },
+  "author": "swastik",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/swstk125/queuecraft/issues"
+  },
+  "homepage": "https://github.com/swstk125/queuecraft#readme",
+  "dependencies": {
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.20.1",
+    "path": "^0.12.7"
+  }
+}
