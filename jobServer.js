@@ -1,3 +1,7 @@
 const initializeJobProcessor = require("./job/index");
+const { initializeDB } = require("./db");
 
-initializeJobProcessor();
+(async () => {
+  await initializeDB();
+  await initializeJobProcessor();
+})();
