@@ -1,5 +1,8 @@
 const app = require("./api");
-const { initializeDB } = require("./db");
+const { initializeDB, initializeRedis } = require("./db");
 
-app.initialize();
-initializeDB();
+(async () => {
+    await initializeDB();
+    await initializeRedis();
+    app.initialize();
+})();
