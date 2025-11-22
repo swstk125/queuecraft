@@ -19,6 +19,14 @@ class UserService {
         return this.userModel.findById(userId);
     }
 
+    async getUserByEmail(email){
+      try {
+        return this.userModel.findOne(email);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
     async updateUser(userId, user) {
         return this.userModel.findByIdAndUpdate(userId, user);
     }
