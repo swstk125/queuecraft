@@ -16,7 +16,10 @@ module.exports = () => {
             // Remove "Bearer " prefix if present
             const tokenValue = token.startsWith('Bearer ') ? token.slice(7) : token;
             const decoded = jwt.verify(tokenValue, secretKey);
-            req.userId = decoded.userId;
+            req.authInfo = {
+                userId: decoded.userId,
+                email: decoded.email
+            };
             next();
         } catch (error) {
             return res.status(401).json({ error: 'Invalid token'});

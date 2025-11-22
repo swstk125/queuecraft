@@ -13,7 +13,7 @@ class LoginService {
     if (user.password !== password) {
       throw new Error('Invalid password');
     }
-    const token = createJwtToken({email: user.email});
+    const token = createJwtToken({userId: user._id, email: user.email});
     return {success: true, jwt: token};
   }
 };
