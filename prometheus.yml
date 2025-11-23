@@ -35,7 +35,7 @@ scrape_configs:
     
     # Static targets
     static_configs:
-      - targets: ['localhost:2000']
+      - targets: ['api:2000']
         labels:
           service: 'queuecraft'
           component: 'api-server'
@@ -51,7 +51,7 @@ scrape_configs:
     metrics_path: '/prometheus/health'
     scrape_interval: 30s
     static_configs:
-      - targets: ['localhost:2000']
+      - targets: ['api:2000']
         labels:
           service: 'queuecraft'
           check: 'health'
