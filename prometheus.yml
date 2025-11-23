@@ -1,0 +1,81 @@
+# Prometheus Configuration for QueueCraft
+
+global:
+  scrape_interval: 15s     # Scrape metrics every 15 seconds
+  evaluation_interval: 15s # Evaluate rules every 15 seconds
+  # Attach these labels to any time series or alerts
+  external_labels:
+    monitor: 'queuecraft-monitor'
+    environment: 'production'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Rule files (optional - for alerts and recording rules)
+# rule_files:
+#   - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # QueueCraft API Server
+  - job_name: 'queuecraft-api'
+    
+    # Metrics endpoint
+    metrics_path: '/prometheus/metrics'
+    
+    # Scrape interval (overrides global)
+    scrape_interval: 15s
+    
+    # Timeout for scraping
+    scrape_timeout: 10s
+    
+    # Static targets
+    static_configs:
+      - targets: ['localhost:2000']
+        labels:
+          service: 'queuecraft'
+          component: 'api-server'
+          environment: 'production'
+    
+    # Add custom query parameters (optional)
+    # params:
+    #   environment: ['production']
+    #   instance: ['api-1']
+  
+  # Health check endpoint (optional)
+  - job_name: 'queuecraft-health'
+    metrics_path: '/prometheus/health'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['localhost:2000']
+        labels:
+          service: 'queuecraft'
+          check: 'health'
+
+# Example: Multiple instances with service discovery
+# scrape_configs:
+#   - job_name: 'queuecraft-cluster'
+#     metrics_path: '/prometheus/metrics'
+#     static_configs:
+#       - targets:
+#         - 'queuecraft-api-1:2000'
+#         - 'queuecraft-api-2:2000'
+#         - 'queuecraft-api-3:2000'
+#         labels:
+#           cluster: 'production'
+#           datacenter: 'us-east-1'
+
+# Example: Docker service discovery
+# scrape_configs:
+#   - job_name: 'queuecraft-docker'
+#     docker_sd_configs:
+#       - host: unix:///var/run/docker.sock
+#     relabel_configs:
+#       - source_labels: [__meta_docker_container_name]
+#         regex: '/queuecraft.*'
+#         action: keep
+

@@ -10,6 +10,7 @@ const loginRouter = require("./rest/login.rest");
 const jobRouter = require("./rest/job.rest");
 const userRouter = require("./rest/user.rest");
 const metricsRouter = require("./rest/metrics.rest");
+const prometheusRouter = require("./rest/prometheus.rest");
 
 // Middleware to authenticate JWT tokens
 const jwtMiddleware = require("./middleware/authmiddleware");
@@ -26,6 +27,8 @@ app.use("/login", jwtMiddleware(), loginRouter);
 app.use("/job", jwtMiddleware(), jobRouter);
 app.use("/user", userRouter);
 app.use("/metrics", jwtMiddleware(), metricsRouter);
+// Prometheus endpoint (no auth required for Prometheus scraper)
+app.use("/prometheus", prometheusRouter);
 // health check
 app.get("/sync", (req, res) => {
   try {

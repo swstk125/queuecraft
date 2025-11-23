@@ -673,6 +673,37 @@ The structured logging and metrics are designed to work seamlessly with:
 
 📖 **For detailed observability documentation, see [OBSERVABILITY.md](./OBSERVABILITY.md)**
 
+### Prometheus Integration
+
+QueueCraft includes **native Prometheus support** for advanced monitoring:
+
+**Public metrics endpoint (no auth required):**
+```bash
+curl http://localhost:2000/prometheus/metrics
+```
+
+**Quick start with Docker:**
+```bash
+# Start QueueCraft + Prometheus + Grafana
+docker-compose -f docker-compose.prometheus.yml up -d
+
+# Access services:
+# - Prometheus UI: http://localhost:9090
+# - Grafana: http://localhost:3001 (admin/admin)
+```
+
+**Available Prometheus metrics:**
+- `queuecraft_jobs_total` - Total jobs submitted
+- `queuecraft_jobs_pending` - Current pending jobs
+- `queuecraft_jobs_running` - Current running jobs
+- `queuecraft_jobs_completed_total` - Completed jobs
+- `queuecraft_jobs_failed_total` - Failed jobs
+- `queuecraft_jobs_success_rate` - Success rate percentage
+- `queuecraft_jobs_dlq` - Jobs in Dead Letter Queue
+- `queuecraft_rate_limit_hits_total` - Rate limit violations
+
+📊 **For Prometheus setup guide, see [PROMETHEUS_SETUP.md](./PROMETHEUS_SETUP.md)**
+
 ## 🧪 Testing
 
 ### Run Tests
