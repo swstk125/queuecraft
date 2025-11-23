@@ -1,0 +1,88 @@
+{
+	"info": {
+		"_postman_id": "230603f5-5f34-4858-9e39-cca11f02da39",
+		"name": "queuecraft",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "31255251"
+	},
+	"item": [
+		{
+			"name": "healthCheck",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "localhost:2000/sync"
+			},
+			"response": []
+		},
+		{
+			"name": "login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "localhost:2000/login"
+			},
+			"response": []
+		},
+		{
+			"name": "createUser",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\",\n    \"email\": \"word@email.com\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "localhost:2000/user/create"
+			},
+			"response": []
+		},
+		{
+			"name": "job",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "localhost:3000/job"
+			},
+			"response": []
+		},
+		{
+			"name": "create jobs",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTIwYjY3MGMxYWZkMDNiNzJlMzFlNzMiLCJlbWFpbCI6IndvcmRAZW1haWwuY29tIiwiaWF0IjoxNzYzNzk2MDMzLCJleHAiOjE3NjM4ODI0MzN9.HWuPIyEt2nv3Wp3b0ydi81SEFJXL2NKzSLXxleuKslo",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"job4\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "localhost:2000/job/create"
+			},
+			"response": []
+		}
+	]
+}
