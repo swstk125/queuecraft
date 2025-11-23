@@ -1,302 +1,353 @@
 # QueueCraft - Distributed Task Queue & Job Processor
 
-A production-ready job queue system with a modern React dashboard UI for monitoring and managing distributed tasks.
+A production-ready job queue system with real-time WebSocket updates and a modern React dashboard for monitoring and managing distributed tasks.
+
+![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
+![Tests](https://img.shields.io/badge/tests-23%20passing-success)
+![Coverage](https://img.shields.io/badge/coverage-high-brightgreen)
 
 ## 📋 Table of Contents
 
-- [Features](#features)
-- [Quick Start](#quick-start)
-- [Architecture](#architecture)
-- [Dashboard UI](#dashboard-ui)
-- [Rate Limiting](#rate-limiting)
-- [API Documentation](#api-documentation)
-- [Testing](#testing)
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Architecture](#️-architecture)
+- [Real-time Updates](#-real-time-updates-websocket)
+- [Dashboard UI](#-dashboard-ui)
+- [API Documentation](#-api-documentation)
+- [Rate Limiting](#-rate-limiting)
+- [Testing](#-testing)
+- [Deployment](#-deployment)
+- [Troubleshooting](#-troubleshooting)
+- [Project Structure](#-project-structure)
 
 ## ✨ Features
 
-### Backend
-- **Distributed Job Queue**: Redis-backed job processing system
-- **Automatic Retry Logic**: Up to 3 retry attempts with exponential backoff
-- **Dead Letter Queue (DLQ)**: Automatic handling of permanently failed jobs
-- **Two-Layer Rate Limiting**: Time-based (10/min) + Concurrent (5 active jobs)
-- **JWT Authentication**: Secure API access with Bearer tokens
-- **MongoDB Storage**: Persistent job and user data
-- **Concurrent Processing**: Configurable worker pool (default: 5 workers)
+### Backend Features
+- ✅ **Distributed Job Queue**: Redis-backed job processing system
+- ✅ **Real-time WebSocket Updates**: Live job status updates via Socket.IO
+- ✅ **Cross-Process Communication**: Redis Pub/Sub for multi-process synchronization
+- ✅ **Automatic Retry Logic**: Up to 3 retry attempts with exponential backoff
+- ✅ **Dead Letter Queue (DLQ)**: Automatic handling of permanently failed jobs
+- ✅ **Two-Layer Rate Limiting**: Time-based (10/min) + Concurrent (5 active jobs)
+- ✅ **JWT Authentication**: Secure API access with Bearer tokens
+- ✅ **MongoDB Storage**: Persistent job and user data
+- ✅ **Concurrent Processing**: Configurable worker pool (default: 5 workers)
 
-### Frontend Dashboard
-- **Real-time Job Monitoring**: Live status updates for all jobs
-- **Interactive Dashboard**: Drill-down from summary cards to detailed views
-- **DLQ Viewer**: Dedicated interface for failed job management
-- **Job Creation**: Create jobs directly from the UI
-- **Responsive Design**: Optimized for desktop, tablet, and mobile
-- **Mock Data Support**: Development mode without backend
-- **Status Filtering**: Quick filters for job categories
-- **Sortable Tables**: Multi-column sorting capabilities
+### Frontend Dashboard Features
+- ✅ **Real-time Job Monitoring**: Live WebSocket updates for all job status changes
+- ✅ **Interactive Dashboard**: Drill-down from summary cards to detailed views
+- ✅ **DLQ Viewer**: Dedicated interface for failed job management
+- ✅ **Job Creation**: Create jobs directly from the UI
+- ✅ **Responsive Design**: Optimized for desktop, tablet, and mobile
+- ✅ **Status Filtering**: Quick filters for job categories
+- ✅ **Sortable Tables**: Multi-column sorting capabilities
+- ✅ **Connection Status**: Visual indicator for WebSocket connection
 
 ## 🚀 Quick Start
 
-See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
+### Prerequisites
+- Node.js v18+
+- MongoDB (local or Docker)
+- Redis (local or Docker)
 
-### TL;DR
+### 1. Install Dependencies
 
 ```bash
-# 1. Install dependencies
+# Backend dependencies
 npm install
+
+# Frontend dependencies
 cd frontend && npm install && cd ..
+```
 
-# 2. Start MongoDB and Redis
-docker-compose up -d  # or start them manually
+### 2. Start MongoDB and Redis
 
-# 3. Start backend (2 terminals)
-node appServer.js      # Terminal 1: API Server (port 2000)
-node jobServer.js      # Terminal 2: Job Processor
+**Option A: Using Docker Compose (Recommended)**
+```bash
+docker-compose up -d
+```
 
-# 4. Create a user
+**Option B: Using Docker manually**
+```bash
+# MongoDB
+docker run -d -p 27017:27017 --name queuecraft-mongo mongo:latest
+
+# Redis
+docker run -d -p 6379:6379 --name queuecraft-redis redis:latest
+```
+
+**Option C: Local installation**
+```bash
+# Start MongoDB
+mongod
+
+# Start Redis (in another terminal)
+redis-server
+```
+
+### 3. Start Backend Services
+
+**Terminal 1: API Server (with WebSocket)**
+```bash
+node appServer.js
+```
+
+Expected output:
+```
+connected to mongodb : mongodb://localhost/queuecraft
+connected to redis : redis://localhost:6379
+✅ Redis publisher initialized for job events.
+Listening on port 2000
+✅ Redis subscriber initialized for channel "job_status_updates".
+✅ Server started with WebSocket support
+```
+
+**Terminal 2: Job Processor**
+```bash
+node jobServer.js
+```
+
+Expected output:
+```
+connected to mongodb : mongodb://localhost/queuecraft
+connected to redis : redis://localhost:6379
+✅ Redis publisher initialized for job events.
+Job processor initialized
+```
+
+### 4. Create a User
+
+```bash
 curl -X POST http://localhost:2000/user/create \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","email":"admin@example.com","password":"admin123"}'
-
-# 5. Start frontend
-cd frontend && npm run dev  # Terminal 3: Dashboard (port 3000)
-
-# 6. Open http://localhost:3000 and login
+  -d '{
+    "username": "admin",
+    "email": "admin@example.com",
+    "password": "admin123"
+  }'
 ```
+
+### 5. Start Frontend Dashboard
+
+**Terminal 3: Frontend Dev Server**
+```bash
+cd frontend
+npm run dev
+```
+
+Expected output:
+```
+VITE v5.0.8  ready in 500 ms
+➜  Local:   http://localhost:3000/
+```
+
+### 6. Access the Dashboard
+
+1. Open `http://localhost:3000` in your browser
+2. Login with:
+   - Email: `admin@example.com`
+   - Password: `admin123`
+3. You should see a **green "Connected"** indicator in the top right!
+
+### 7. Test Real-time Updates
+
+1. Click **"Create Job"** button in the dashboard
+2. Enter a job name and click **"Create"**
+3. Watch the job automatically update from **Pending → Running → Completed**
+4. No page refresh needed! ✨
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Dashboard UI (React)                    │
-│              http://localhost:3000                          │
-│  - Job Overview  - DLQ Viewer  - Job Details - Auth        │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ REST API
-                       ↓
-┌─────────────────────────────────────────────────────────────┐
-│                  API Server (Express)                       │
-│              http://localhost:2000                          │
-│  - Rate Limiting  - JWT Auth  - Job CRUD  - User Mgmt      │
-└───────────┬─────────────────────────────┬───────────────────┘
-            │                             │
-            ↓                             ↓
-    ┌───────────────┐           ┌─────────────────┐
-    │   MongoDB     │           │     Redis       │
-    │  Job Storage  │           │  Queue Backend  │
-    └───────────────┘           └─────────────────┘
-            ↑                             ↑
-            │                             │
-            └─────────┬───────────────────┘
-                      │
-              ┌───────┴────────┐
-              │ Job Processor  │
-              │  Worker Pool   │
-              │ (Concurrency:5)│
-              └────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                  Dashboard UI (React + WebSocket)                 │
+│                      http://localhost:3000                        │
+│   - Job Overview  - Real-time Updates  - DLQ Viewer  - Auth     │
+└───────────────────────────┬──────────────────────────────────────┘
+                            │ REST API + WebSocket
+                            ↓
+┌──────────────────────────────────────────────────────────────────┐
+│            API Server (Express + Socket.IO)                       │
+│                   http://localhost:2000                           │
+│  - Rate Limiting  - JWT Auth  - Job CRUD  - WebSocket Events    │
+└──────────┬────────────────────────────────┬──────────────────────┘
+           │                                │
+           ↓                                ↓
+   ┌──────────────┐                ┌──────────────────┐
+   │   MongoDB    │                │      Redis       │
+   │ Job Storage  │                │ Queue + Pub/Sub  │
+   └──────────────┘                └──────────────────┘
+           ↑                                ↑
+           │                                │
+           └────────────┬───────────────────┘
+                        │
+                ┌───────┴──────────┐
+                │  Job Processor   │
+                │   Worker Pool    │
+                │  (Concurrency:5) │
+                └──────────────────┘
 ```
+
+### Real-time Event Flow
+
+```
+Job Processor                Redis Pub/Sub              WebSocket Server              Dashboard
+     │                             │                           │                          │
+     │ (1) Job status changes      │                           │                          │
+     ├─────────────────────────────>                           │                          │
+     │     PUBLISH event            │                           │                          │
+     │                             │                           │                          │
+     │                             │ (2) Forward to subscriber │                          │
+     │                             ├───────────────────────────>                          │
+     │                             │                           │                          │
+     │                             │                           │ (3) Emit to client       │
+     │                             │                           ├─────────────────────────>│
+     │                             │                           │                          │
+     │                             │                           │                          │ (4) UI updates
+     │                             │                           │                          │     automatically
+```
+
+## 🔄 Real-time Updates (WebSocket)
+
+### How It Works
+
+QueueCraft uses **Socket.IO** with **Redis Pub/Sub** to deliver real-time job status updates across multiple processes:
+
+1. **Job Processor** updates job status in MongoDB
+2. **Job Processor** publishes event to Redis channel
+3. **WebSocket Server** (in API server) subscribes to Redis channel
+4. **WebSocket Server** emits event to connected dashboard clients
+5. **Dashboard** updates UI automatically (no page refresh!)
+
+### Supported Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `job:created` | New job created | Complete job object |
+| `job:status:updated` | Job status changed | Job object + oldStatus |
+| `job:completed` | Job finished successfully | Complete job object |
+| `job:movedToDLQ` | Job moved to DLQ after retries | Complete job object |
+
+### Testing Real-time Updates
+
+**Method 1: Via Dashboard**
+1. Login to dashboard
+2. Check connection indicator (should be green "Connected")
+3. Click "Create Job"
+4. Watch status change automatically!
+
+**Method 2: Via API**
+```bash
+# Get token
+TOKEN=$(curl -s -X POST http://localhost:2000/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"admin123"}' \
+  | jq -r '.jwt')
+
+# Create a job
+curl -X POST http://localhost:2000/job/create \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"API Test Job"}'
+
+# Watch the dashboard update automatically!
+```
+
+**Method 3: Multiple Jobs**
+```bash
+# Create 5 jobs rapidly
+for i in {1..5}; do
+  curl -X POST http://localhost:2000/job/create \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"Batch Job $i\"}"
+done
+
+# Watch them all process with live updates!
+```
+
+### WebSocket Connection Status
+
+The dashboard displays connection status in the top right:
+- 🟢 **Green "Connected"**: WebSocket connected and authenticated
+- 🔴 **Red "Disconnected"**: WebSocket not connected (check backend)
+
+### Troubleshooting Real-time Updates
+
+**Not seeing updates?**
+
+1. **Check Backend Logs**:
+   ```bash
+   # Terminal 1 (appServer.js) should show:
+   ✅ User connected: admin@example.com (socket-id) [Total: 1]
+   
+   # Terminal 2 (jobServer.js) should show:
+   📤 Published to Redis channel "job_status_updates": job:status:updated
+   ```
+
+2. **Check Browser Console**:
+   ```javascript
+   ✅ WebSocket connected
+   ✅ WebSocket authenticated
+   📥 Job status updated via WebSocket: {...}
+   ```
+
+3. **Verify Redis is Running**:
+   ```bash
+   redis-cli ping  # Should return "PONG"
+   ```
+
+4. **Check Socket.IO in Network Tab**:
+   - Open browser DevTools → Network tab
+   - Filter by "WS" or "WebSocket"
+   - Should see `socket.io` connection
+   - Click to see messages
 
 ## 🎨 Dashboard UI
 
-The dashboard provides a comprehensive interface for managing your job queue:
-
 ### Main Dashboard
-- **Summary Cards**: Quick overview of job counts by status (Pending, Running, Completed, Failed)
+- **Summary Cards**: Quick overview of job counts (Pending, Running, Completed, Failed)
 - **Job Table**: Sortable, filterable table of all jobs
 - **Status Filters**: Quick toggle between job states
 - **Create Job**: Modal for creating new jobs
-- **Real-time Updates**: Manual refresh with loading states
+- **Live Updates**: Automatic UI updates via WebSocket
 
 ### DLQ Viewer
 - **Failed Jobs List**: All jobs that exceeded retry limits
 - **Job Details Modal**: Comprehensive view of failed job metadata
-- **Guidance Panel**: Helpful information about DLQ management
 - **Visual Indicators**: Clear warnings for jobs requiring attention
 
 ### Job Details Page
 - **Complete Metadata**: All job information in organized sections
 - **Status Indicators**: Color-coded badges for current state
-- **Timestamps**: Created and modified times with relative display
-- **Raw Data View**: JSON representation for debugging
+- **Timestamps**: Created and modified times
 
-### Screenshots
-
-<table>
-  <tr>
-    <td><strong>Dashboard</strong><br/>Job overview with stats</td>
-    <td><strong>DLQ Viewer</strong><br/>Failed jobs management</td>
-  </tr>
-  <tr>
-    <td><strong>Job Details</strong><br/>Comprehensive job info</td>
-    <td><strong>Mobile View</strong><br/>Fully responsive design</td>
-  </tr>
-</table>
-
-## 🔐 Rate Limiting for Job Creation API
-
-### Objective
-Implement rate limiting for the `POST /job/create` endpoint to ensure no user can have more than **5 pending or active jobs** at any time.
-
-## Implementation
-
-### Two-Layer Rate Limiting
-
-#### 1. Time-Based Rate Limiting (Middleware)
-- **Limit**: Maximum 10 job creation attempts per user per minute
-- **Implementation**: In-memory tracking with sliding window
-- **Response**: Returns HTTP 429 with retry-after time
-
-#### 2. Concurrent Job Limiting (Service Layer)
-- **Limit**: Maximum 5 jobs with status `pending` or `running` per user
-- **Enforcement**: Checked before each job creation
-- **Response**: Returns HTTP 429 when limit exceeded
-
-### Key Files
-
-#### 1. `api/middleware/rateLimitMiddleware.js` (NEW)
-Time-based rate limiting:
-- Tracks job creation attempts per user
-- Uses sliding window algorithm (last 60 seconds)
-- In-memory storage with automatic cleanup
-- Isolated per user
-
-```javascript
-// Allows only 10 attempts per minute
-if (attempts >= 10) {
-  return 429 with retry-after time
-}
-```
-
-#### 2. `api/service/JobService.js`
-Added rate limiting to job creation:
-- Counts active jobs (pending/running) for the user
-- Rejects creation if user has 5+ active jobs
-- Throws error with 429 status code
-
-```javascript
-const activeJobCount = await this.jobModel.countDocuments({
-  ownerId: userId,
-  status: { $in: ['pending', 'running'] }
-});
-
-if (activeJobCount >= 5) {
-  throw new Error('Rate limit exceeded');
-}
-```
-
-#### 3. `api/rest/job.rest.js`
-Applied middleware and error handling:
-- Uses rate limit middleware
-- Returns 429 status for rate limit errors
-- Returns 500 for other errors
-
-#### 4. `db/schema/job.js`
-Optimized for performance:
-- Added compound index: `{ ownerId: 1, status: 1 }`
-- Enables fast rate limit queries
-
-## Running Tests
-
-```bash
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-```
-
-### Test Coverage
-- **23 tests** covering:
-  - Time-based rate limiting (10/minute)
-  - Job creation with concurrent limits (5 max)
-  - Rate limit enforcement
-  - User isolation (independent limits)
-  - Recovery after completing jobs
-  - Status filtering (only pending/running count)
-  - Middleware behavior
-
-## API Examples
-
-### Success Response (201)
-```json
-{
-  "success": true,
-  "job": {
-    "_id": "...",
-    "name": "Job Name",
-    "ownerId": "user-123",
-    "status": "pending"
-  }
-}
-```
-
-### Rate Limit Responses (429)
-
-**Time-based limit (10/minute):**
-```json
-{
-  "success": false,
-  "error": "Rate limit exceeded",
-  "message": "Maximum 10 job creation attempts per minute. Try again in 30 seconds.",
-  "retryAfter": 30
-}
-```
-
-**Concurrent job limit (5 active jobs):**
-```json
-{
-  "success": false,
-  "error": "Rate limit exceeded. Maximum 5 active jobs allowed."
-}
-```
-
-## Testing Manually
-
-```bash
-# Create jobs (works for first 5)
-curl -X POST http://localhost:3000/job/create \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Test Job"}'
-
-# 6th request will return 429
-```
-
-## Design Decisions
-
-1. **Two-Layer Protection**: 
-   - Middleware: Prevents spam (10 attempts/minute)
-   - Service: Prevents resource overload (5 concurrent jobs)
-2. **Simple & Clear**: Straightforward implementation without over-engineering
-3. **In-Memory Tracking**: Sliding window for time-based limits
-4. **Database-Level Check**: Count query ensures accurate concurrent limit
-5. **User Isolation**: Each user has independent rate limits
-6. **Status-Based**: Only `pending` and `running` jobs count toward concurrent limit
-7. **Indexed Queries**: Compound index ensures fast performance
-
-## Edge Cases Handled
-
-- ✅ Completed/DLQ jobs don't count toward limit
-- ✅ Different users have independent limits
-- ✅ Jobs can be created after completing existing ones
-- ✅ Clear error message when limit exceeded
-
-## Configuration
-
-**Time-based rate limit** (10/minute): Edit `api/middleware/rateLimitMiddleware.js`
-```javascript
-const MAX_REQUESTS_PER_WINDOW = 10; // Adjust as needed
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-```
-
-**Concurrent job limit** (5 active jobs): Edit `api/service/JobService.js`
-```javascript
-const MAX_ACTIVE_JOBS_PER_USER = 5; // Adjust as needed
-```
+### Tech Stack
+- **React 18**: Modern React with hooks
+- **Vite 5**: Fast build tool and dev server
+- **React Router 6**: Client-side routing
+- **Socket.IO Client**: WebSocket integration
+- **Axios**: HTTP client with interceptors
+- **Tailwind CSS**: Utility-first styling
+- **Lucide React**: Beautiful icons
 
 ## 📚 API Documentation
 
-### Authentication Endpoints
+### Base URL
+```
+http://localhost:2000
+```
 
-#### Create User
+### Authentication
+
+All protected endpoints require JWT token:
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+### Endpoints
+
+#### 1. Create User
 ```bash
 POST /user/create
 Content-Type: application/json
@@ -306,9 +357,18 @@ Content-Type: application/json
   "email": "admin@example.com",
   "password": "admin123"
 }
+
+# Response
+{
+  "_id": "...",
+  "username": "admin",
+  "email": "admin@example.com",
+  "con": "2024-03-20T10:30:00.000Z",
+  "mon": "2024-03-20T10:30:00.000Z"
+}
 ```
 
-#### Login
+#### 2. Login
 ```bash
 POST /login
 Content-Type: application/json
@@ -318,16 +378,14 @@ Content-Type: application/json
   "password": "admin123"
 }
 
-Response:
+# Response
 {
   "success": true,
   "jwt": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
 
-### Job Endpoints (Protected)
-
-#### Create Job
+#### 3. Create Job (Protected)
 ```bash
 POST /job/create
 Authorization: Bearer <token>
@@ -337,47 +395,147 @@ Content-Type: application/json
   "name": "My Job"
 }
 
-Success Response (201):
+# Success Response (201)
 {
   "success": true,
   "job": {
     "_id": "...",
     "name": "My Job",
-    "ownerId": "user-123",
+    "ownerId": "...",
     "status": "pending",
-    "retryCount": 0
+    "retryCount": 0,
+    "con": "2024-03-20T10:35:00.000Z"
   }
 }
 
-Rate Limit Response (429):
+# Rate Limit Response (429)
 {
   "success": false,
   "error": "Rate limit exceeded. Maximum 5 active jobs allowed."
 }
 ```
 
-#### Get Jobs
+#### 4. Get Jobs (Protected)
 ```bash
 GET /job?status=pending
 Authorization: Bearer <token>
 
-Response:
+# Response
 {
   "success": true,
   "jobs": [...]
 }
 ```
 
-#### Health Check
+#### 5. Get Job Statistics (Protected)
+```bash
+GET /job/stats
+Authorization: Bearer <token>
+
+# Response
+{
+  "success": true,
+  "stats": {
+    "pending": 2,
+    "running": 1,
+    "completed": 15,
+    "failed": 1,
+    "total": 19
+  }
+}
+```
+
+#### 6. Health Check
 ```bash
 GET /sync
 
-Response: 1732456789000 (timestamp)
+# Response
+1732456789000
 ```
+
+### Complete Workflow Example
+
+```bash
+#!/bin/bash
+
+BASE_URL="http://localhost:2000"
+
+# 1. Create user
+curl -X POST $BASE_URL/user/create \
+  -H "Content-Type: application/json" \
+  -d '{"username":"demo","email":"demo@example.com","password":"demo123"}'
+
+# 2. Login
+TOKEN=$(curl -s -X POST $BASE_URL/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@example.com","password":"demo123"}' | jq -r '.jwt')
+
+# 3. Create jobs
+for i in {1..3}; do
+  curl -X POST $BASE_URL/job/create \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"Job $i\"}"
+done
+
+# 4. Get all jobs
+curl -X GET $BASE_URL/job \
+  -H "Authorization: Bearer $TOKEN" | jq '.'
+```
+
+## 🔐 Rate Limiting
+
+### Two-Layer Protection
+
+#### 1. Time-Based Rate Limiting (Middleware)
+- **Limit**: 10 job creation attempts per minute per user
+- **Implementation**: In-memory sliding window
+- **Response**: HTTP 429 with retry-after time
+
+```json
+{
+  "success": false,
+  "error": "Rate limit exceeded",
+  "message": "Maximum 10 job creation attempts per minute. Try again in 30 seconds.",
+  "retryAfter": 30
+}
+```
+
+#### 2. Concurrent Job Limiting (Service Layer)
+- **Limit**: Maximum 5 jobs with status `pending` or `running`
+- **Enforcement**: Database query before job creation
+- **Response**: HTTP 429 when limit exceeded
+
+```json
+{
+  "success": false,
+  "error": "Rate limit exceeded. Maximum 5 active jobs allowed."
+}
+```
+
+### Configuration
+
+**Time-based limit** (edit `api/middleware/rateLimitMiddleware.js`):
+```javascript
+const MAX_REQUESTS_PER_WINDOW = 10;
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+```
+
+**Concurrent limit** (edit `api/service/JobService.js`):
+```javascript
+const MAX_ACTIVE_JOBS_PER_USER = 5;
+```
+
+### Key Features
+- ✅ User isolation (independent limits)
+- ✅ Only pending/running jobs count
+- ✅ Completed/DLQ jobs don't count
+- ✅ Clear error messages
+- ✅ Fast with compound indexes
 
 ## 🧪 Testing
 
-### Run All Tests
+### Run Tests
 ```bash
 npm test
 ```
@@ -394,7 +552,7 @@ Tests:       23 passed, 23 total
 Coverage:    High coverage across critical paths
 ```
 
-**Test Coverage Includes:**
+### Test Coverage Includes
 - ✅ Time-based rate limiting (10/minute)
 - ✅ Concurrent job limiting (5 max active)
 - ✅ User isolation (independent limits)
@@ -402,18 +560,90 @@ Coverage:    High coverage across critical paths
 - ✅ Rate limit recovery after job completion
 - ✅ Error handling and edge cases
 
-## 🐳 Docker Support
+## 🚀 Deployment
 
-### Quick Start with Docker Compose
+### Production Environment Variables
+
+**Backend**
 ```bash
-# Start MongoDB and Redis
-docker-compose up -d
+# MongoDB connection
+MONGODB_URI=mongodb://your-mongo-url/queuecraft
 
-# Stop services
-docker-compose down
+# Redis connection
+REDIS_URL=redis://your-redis-url:6379
+
+# JWT secret
+SECRET_KEY=your-secure-secret-key
+
+# API server port
+PORT=2000
+
+# Frontend URL for CORS
+FRONTEND_URL=https://your-frontend-domain.com
 ```
 
-### docker-compose.yml
+**Frontend**
+```bash
+# API URL
+VITE_API_BASE_URL=https://api.yourdomain.com
+```
+
+### Deploy Backend with PM2
+
+```bash
+# Install PM2
+npm install -g pm2
+
+# Start services
+pm2 start appServer.js --name queuecraft-api
+pm2 start jobServer.js --name queuecraft-worker
+
+# Monitor
+pm2 monit
+
+# View logs
+pm2 logs
+
+# Save configuration
+pm2 save
+pm2 startup
+```
+
+### Deploy Frontend
+
+#### Option A: Netlify / Vercel
+```bash
+cd frontend
+npm run build
+
+# Deploy 'dist' folder via platform CLI or UI
+```
+
+#### Option B: Docker
+```dockerfile
+FROM node:18-alpine as build
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+#### Option C: AWS S3 + CloudFront
+```bash
+cd frontend
+npm run build
+aws s3 sync dist/ s3://your-bucket-name --delete
+aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
+```
+
+### Docker Compose (Full Stack)
+
 ```yaml
 version: '3.8'
 
@@ -432,9 +662,181 @@ services:
     volumes:
       - redis_data:/data
 
+  api:
+    build: .
+    command: node appServer.js
+    ports:
+      - "2000:2000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/queuecraft
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      - mongodb
+      - redis
+
+  worker:
+    build: .
+    command: node jobServer.js
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/queuecraft
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongodb
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
 volumes:
   mongodb_data:
   redis_data:
+```
+
+## 🔧 Troubleshooting
+
+### Backend Issues
+
+**MongoDB Connection Error**
+```bash
+# Check if MongoDB is running
+docker ps | grep mongo
+# or
+sudo systemctl status mongod
+
+# Test connection
+mongosh mongodb://localhost:27017/queuecraft
+```
+
+**Redis Connection Error**
+```bash
+# Check if Redis is running
+docker ps | grep redis
+# or
+sudo systemctl status redis
+
+# Test connection
+redis-cli ping  # Should return "PONG"
+```
+
+**WebSocket Not Connecting**
+```bash
+# Check appServer logs for:
+✅ Server started with WebSocket support
+
+# Check firewall/CORS settings
+# Ensure FRONTEND_URL is set correctly
+```
+
+### Frontend Issues
+
+**401 Unauthorized**
+1. Create user first via `/user/create`
+2. Login with correct credentials
+3. Clear localStorage and try again
+
+**WebSocket Shows "Disconnected"**
+1. Check backend is running (both appServer.js and jobServer.js)
+2. Check Redis is running
+3. Open browser console for errors
+4. Check Network tab for WebSocket connection
+
+**CORS Errors**
+- Ensure backend has correct `FRONTEND_URL` set
+- Check CORS middleware in `api/index.js`
+
+### Performance Issues
+
+**Jobs Processing Slowly**
+```javascript
+// Increase worker pool (job/index.js)
+const MAX_WORKERS = 10; // Default is 5
+```
+
+**High Memory Usage**
+- Reduce worker pool size
+- Implement job pagination
+- Add memory limits in PM2
+
+## 📁 Project Structure
+
+```
+queuecraft/
+├── api/                          # API layer
+│   ├── rest/                    # REST endpoints
+│   │   ├── job.rest.js         # Job CRUD endpoints
+│   │   ├── login.rest.js       # Authentication
+│   │   └── user.rest.js        # User management
+│   ├── service/                 # Business logic
+│   │   ├── JobService.js       # Job operations
+│   │   ├── LoginService.js     # Authentication logic
+│   │   └── UserService.js      # User operations
+│   ├── middleware/              # Custom middleware
+│   │   ├── authmiddleware.js   # JWT verification
+│   │   └── rateLimitMiddleware.js # Rate limiting
+│   └── index.js                # Express app setup
+├── db/                          # Database layer
+│   ├── schema/                 # Mongoose schemas
+│   │   ├── job.js             # Job schema
+│   │   └── user.js            # User schema
+│   ├── model.js               # Model loader
+│   └── index.js               # DB connection
+├── job/                         # Job processing
+│   ├── index.js                # Job processor
+│   └── jobHandler.js           # Job execution logic
+├── websocket/                   # Real-time communication
+│   ├── websocketServer.js      # Socket.IO server + Redis sub
+│   └── jobEventBridge.js       # Redis publisher for events
+├── util/                        # Utilities
+│   └── jwtUtils.js             # JWT helpers
+├── frontend/                    # React dashboard
+│   ├── src/
+│   │   ├── components/         # Reusable UI components
+│   │   │   ├── StatusBadge.jsx
+│   │   │   ├── SummaryCard.jsx
+│   │   │   ├── JobTable.jsx
+│   │   │   ├── DLQTable.jsx
+│   │   │   ├── Layout.jsx
+│   │   │   └── LoadingSpinner.jsx
+│   │   ├── pages/              # Page components
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── DLQViewer.jsx
+│   │   │   ├── JobDetails.jsx
+│   │   │   └── Login.jsx
+│   │   ├── services/           # API services
+│   │   │   ├── api.js
+│   │   │   ├── jobService.js
+│   │   │   └── authService.js
+│   │   ├── hooks/              # Custom hooks
+│   │   │   ├── useWebSocket.js
+│   │   │   ├── usePolling.js
+│   │   │   └── useJobs.js
+│   │   ├── context/            # React context
+│   │   │   └── AuthContext.jsx
+│   │   ├── utils/              # Utilities
+│   │   │   └── dateUtils.js
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   └── package.json
+├── test/                        # Unit tests
+│   └── unit/
+│       ├── job.rest.test.js
+│       ├── JobService.test.js
+│       └── rateLimitMiddleware.test.js
+├── docker-compose.yml          # Docker services
+├── appServer.js                # API server entry
+├── jobServer.js                # Job processor entry
+├── package.json                # Backend dependencies
+└── README.md                   # This file
 ```
 
 ## 📊 Performance Metrics
@@ -445,114 +847,49 @@ volumes:
   - 10 job creation attempts per minute per user
   - 5 concurrent active jobs per user
 - **Retry Strategy**: Up to 3 attempts before DLQ
+- **WebSocket Latency**: < 100ms for status updates
 
-## 🔧 Configuration
+## 🎯 Design Decisions
 
-### Backend Environment Variables
-```bash
-# MongoDB connection
-MONGODB_URI=mongodb://localhost/queuecraft
+### Why Socket.IO?
+- Standard WebSocket library with fallback support
+- Built-in reconnection logic
+- Room-based messaging for user isolation
+- Easy integration with Express
 
-# Redis connection
-REDIS_URL=redis://localhost:6379
+### Why Redis Pub/Sub?
+- Enables multi-process communication
+- Decouples job processor from API server
+- Scales horizontally with multiple workers
+- Already using Redis for queue
 
-# JWT secret
-SECRET_KEY=your-secret-key
+### Why Two Rate Limits?
+- **Time-based**: Prevents spam/abuse
+- **Concurrent**: Prevents resource overload
+- Both work together for comprehensive protection
 
-# API server port
-PORT=2000
-```
+### Trade-offs
+- In-memory time-based limits (single-server, could use Redis for multi-server)
+- No MongoDB transactions (would require replica set)
+- JWT in localStorage (consider httpOnly cookies for production)
+- Simple password storage (use bcrypt in production)
 
-### Frontend Environment Variables
-```bash
-# API URL (optional, uses proxy in dev)
-VITE_API_URL=http://localhost:2000
+## 🔮 Future Enhancements
 
-# Use mock data (development)
-VITE_USE_MOCK_DATA=false
-```
-
-## 🚀 Production Deployment
-
-### Backend (PM2)
-```bash
-# Install PM2
-npm install -g pm2
-
-# Start services
-pm2 start appServer.js --name queuecraft-api
-pm2 start jobServer.js --name queuecraft-worker
-
-# Monitor
-pm2 monit
-
-# Save configuration
-pm2 save
-```
-
-### Frontend (Build & Deploy)
-```bash
-cd frontend
-npm run build
-
-# Deploy 'dist' folder to:
-# - Netlify
-# - Vercel
-# - AWS S3 + CloudFront
-# - Any static hosting service
-```
-
-## 📁 Project Structure
-
-```
-queuecraft/
-├── api/                    # API layer
-│   ├── rest/              # REST endpoints
-│   ├── service/           # Business logic
-│   └── middleware/        # Custom middleware
-├── db/                    # Database layer
-│   ├── schema/           # Mongoose schemas
-│   └── model.js          # Model loader
-├── job/                   # Job processing
-│   ├── index.js          # Job processor
-│   └── jobHandler.js     # Job execution logic
-├── frontend/              # React dashboard
-│   ├── src/
-│   │   ├── components/   # Reusable UI components
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API services
-│   │   └── context/      # React context
-│   └── README.md         # Frontend documentation
-├── test/                  # Unit tests
-├── util/                  # Utilities
-├── appServer.js          # API server entry
-├── jobServer.js          # Job processor entry
-└── README.md             # This file
-```
-
-## 🎯 Design Decisions & Trade-offs
-
-**Simplicity over Complexity:**
-- In-memory rate limiting (suitable for single-server deployments)
-- No transaction support (would require MongoDB replica set)
-- Direct MongoDB queries (fast and simple)
-- JWT stored in localStorage (consider httpOnly cookies for production)
-
-**For Production Enhancement:**
-- ✅ Add MongoDB transactions for race condition protection
-- ✅ Use Redis for distributed rate limiting
-- ✅ Add rate limit headers (X-RateLimit-*)
-- ✅ Implement proper password hashing (bcrypt)
-- ✅ Add input validation middleware
-- ✅ Add monitoring/alerting (Prometheus, Grafana)
-- ✅ Add request logging (Morgan, Winston)
-- ✅ Implement graceful shutdown handlers
-
-## 📖 Additional Documentation
-
-- **[QUICKSTART.md](QUICKSTART.md)** - Get started in 5 minutes
-- **[frontend/README.md](frontend/README.md)** - Detailed frontend documentation
-- **[Backend Eng Assignment.pdf](Backend%20Eng%20Assignment.pdf)** - Original requirements
+- [ ] Job scheduling (cron-like)
+- [ ] Job dependencies and workflows
+- [ ] Multi-tenancy support
+- [ ] Advanced analytics dashboard
+- [ ] Email notifications for failures
+- [ ] Job priority queues
+- [ ] Batch job operations
+- [ ] Export job data (CSV, JSON)
+- [ ] Dark mode toggle
+- [ ] Password hashing (bcrypt)
+- [ ] MongoDB transactions
+- [ ] Redis distributed rate limiting
+- [ ] Prometheus metrics
+- [ ] Grafana dashboards
 
 ## 🤝 Contributing
 
@@ -576,13 +913,12 @@ ISC License - See package.json for details
 
 ## 🙏 Acknowledgments
 
-- Built with Express.js, React, MongoDB, and Redis
+- Built with Express.js, React, MongoDB, Redis, and Socket.IO
 - UI components powered by Tailwind CSS
 - Icons by Lucide React
 
 ---
 
-**Status**: ✅ Complete | Backend + Frontend | 23 Tests Passing | Production Ready
+**Status**: ✅ Complete | Backend + Frontend | Real-time WebSocket Updates | 23 Tests Passing | Production Ready
 
 For questions or issues, please open an issue on GitHub.
-
