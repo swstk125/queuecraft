@@ -1,0 +1,7 @@
+{
+    "uri": {
+        "doc": "MongoDB connection URI",
+        "default": "mongodb://localhost/queuecraft",
+        "env": "MONGODB_URI"
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "secret": {
+        "doc": "JWT signing secret key",
+        "default": "secret",
+        "env": "SECRET_KEY",
+        "sensitive": true
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "type": "service_account",
+    "project_id": "jio-jioengage",
+    "private_key_id": "a8fb821b03d69e3ece930eb11df0e77a85a0c56d",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC8C0OuSuJEubuY\n3rotrCPu8WUT+SRWeD9WGKouPZosZgVv8Q/6saHQ8VHvGIPBq5H7YsyaNSX+6DOD\nyUhPUkAH+ErrkdLPjT+Q6sxZeF4pEPi2VXypVFcuZ/lSP4mX92lcAeVUnE1q8Vsj\n40WEIs8lJnofXcUqXGYBRTN6ESsIEXvC22/2NzTV3gcpq3wHBEKltd7rBvse6TJf\nGclactDk5Cnu2wTDn63AOh/pcTgMMK8wChyVQNivN8l8iTgga63s5LGaK/+cuuZC\n+39IeY1BaK+lPb2TVUkSwejMbEy7ZgUt71Cst5GZYI+D1yvr5f6NSHJwP8OHWA13\nfKZxjXWrAgMBAAECggEAHD+A8kzTgsl38fX7d+L1Hu7qZT63A7paoV9hKUMdxu+o\nf3FyGhHXIiEuUsGXAV/5tQ7Zd4zmYU2Wd4SkNS5A6jGVZ5/nUECCvQ1Yl1QqqPag\nthtPd8xwsEr0PDPJQqfrDuRGBBja1Gbfbxu0FK55+bW3AMFAXiW1ORmhKwQrN7HO\nnnfNxQoNbThU5wZ+dgdwK60nO5vydn7osrcbhUYr2Gv0gDAhTUOwleM+CMwjzQnn\nqAjJn+mJpHykb94etlHZi4LkX0K3zIsRKE/O+jGSGDKnRxxpM1z/Kb7lHLzjBJbS\nRm6fxTt4Xyvjdn2pjCNrClJBkXmdbxSkCHj+li2VgQKBgQDpgoaRt4+GRf/Lw6j0\nEcQtdwveGTXAi31FsJVh+eG1C+x6QbAnx+vFzpeAnIGKH7jx+0M7PN2p13ASR5VA\npMmA75SHCMHv/cm2mqqiwtLUIJVO6TxmzSu202rYNgaibYrqj1JMvVlVsPEQdjFr\nnIeOkk/xpuIoaoDh1vP1HxulawKBgQDOJ7i9Wt946R3pCZxaOyYtsz7E3N0pjvB7\np/7YlaWl6IXE1tV7g3cCw5acYxzAzBoBizMP0g0tLZUxlwWiO8gKKXsgWEiD+ktY\ntNmn6viMGNLEdlM9jpa36BKGQsV3gf8EiVHIhZTZyCIK8JlLdSBPvkxDAqVFzfio\nzYS9GNFAwQKBgGsPzWNCJiwKLB3gt7Yv7yJpUqeiJ2MAkY9CRzuEtler/+CN/ZY/\ns3oeHph5KWuK3+ESsuCWJ4uXm2rGJ0hcRYc4UYEYItNGKRXwFAxMBx37Unm7tlXr\n+/73MCWxn5kZYHfq/nDw3+TKG7zQdBhCzGQx8TV6rnaZXj4tr+zTNnnBAoGAItTh\nSNUOxv4UOKiQC0rNI5GSfG6Yy4nEJhB3ZZ67MzH7UAvAXDMVK5liXB/+3rBdgH9F\nbFngMg7uk0diA0w4e0cQ76Ea93mVu3IrCE0SG5GiIuGfJNpvqrkCUD794DhNnzWY\nZNn1EWrYHaMTM4WhpPeRKQ1MYWPwrIy07cJAsMECgYEA5ZVpx9u5R28ti4xwXsAY\nzDsrourY+qY5A/KZobaH246QISqDd7kUE39yR7rp6sAtuoXb6aNoAy634GL1gynz\nCNDrhuL9WdX21SgzcWkGEEQAkvojbu+XiW2sj+/UN6PArKUtitb+zcAftGk5tdW9\nuc0UEci1fuRkbOT+DYo+9hE=\n-----END PRIVATE KEY-----\n",
+    "client_email": "jioengage-cloud-storage-access@jio-jioengage.iam.gserviceaccount.com",
+    "client_id": "104208286204284418611",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/jioengage-cloud-storage-access%40jio-jioengage.iam.gserviceaccount.com"
+  }

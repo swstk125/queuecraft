@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const secretKey = process.env.SECRET_KEY || "secret";
+const config = require('../../config');
 
 module.exports = () => {
     return ( req, res, next ) => {
@@ -15,6 +15,7 @@ module.exports = () => {
         try {
             // Remove "Bearer " prefix if present
             const tokenValue = token.startsWith('Bearer ') ? token.slice(7) : token;
+            const secretKey = config.get('jwt.secret');
             const decoded = jwt.verify(tokenValue, secretKey);
             req.authInfo = {
                 userId: decoded.userId,

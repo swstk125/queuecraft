@@ -1,0 +1,22 @@
+{
+  "db": {
+    "uri": "mongodb://your-production-mongodb-host:27017/queuecraft"
+  },
+  "redis": {
+    "url": "redis://your-production-redis-host:6379"
+  },
+  "jwt": {
+    "secret": "your-super-secure-jwt-secret-change-this"
+  },
+  "server": {
+    "port": 2000
+  },
+  "job": {
+    "concurrency": 10
+  },
+  "websocket": {
+    "cors": {
+      "origin": "https://yourdomain.com"
+    }
+  }
+}

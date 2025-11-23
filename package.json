@@ -29,8 +29,11 @@
   },
   "homepage": "https://github.com/swstk125/queuecraft#readme",
   "dependencies": {
+    "convict": "^6.2.4",
+    "debug": "^4.4.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
     "mongoose": "^8.20.1",
     "path": "^0.12.7",
     "redis": "^4.7.0",

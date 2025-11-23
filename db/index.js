@@ -1,8 +1,9 @@
 const mongoose = require("mongoose");
 const redis = require("redis");
+const config = require("../config");
 
-const connectionString = process.env.MONGODB_URI || "mongodb://localhost/queuecraft";
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+const connectionString = config.get('db.uri');
+const redisUrl = config.get('redis.url');
 
 let redisClient = null;
 

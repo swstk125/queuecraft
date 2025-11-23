@@ -1,0 +1,7 @@
+{
+    "override": {
+        "doc": "Path to environment-specific override configuration file",
+        "default": "./config/deployment.json",
+        "env": "CONFIG_OVERRIDE"
+    }
+}

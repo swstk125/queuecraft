@@ -1,0 +1,15 @@
+{
+    "message_reactions":["LOVE", "LIT", "THUMBSUP", "HEARTBREAK"],
+    "message_reports": ["Insult, harrasment or threats", "Inappropriate content", "Unwanted commercial content", "Hate speech or graphic violence"],
+    "message_max_length": 150,
+    "max_priority_message" : 5,
+    "batch_publish_time": 2000,
+    "maxMessages":{
+        "default": 100,
+        "env": "MAX_MESSAGES"
+    },
+    "maxWaitTime":{
+        "default": 100,
+        "env": "MAX_WAIT_TIME_IN_MILI_SECONDS"
+    }
+}

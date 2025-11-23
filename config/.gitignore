@@ -1,0 +1,14 @@
+# Ignore environment-specific deployment files
+deployment.json
+production.json
+staging.json
+development.json
+
+# Ignore any local override files
+local.json
+*.local.json
+
+# Keep example files
+!deployment.example.json
+!*.example.json
+

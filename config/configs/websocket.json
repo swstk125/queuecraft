@@ -1,0 +1,9 @@
+{
+    "cors": {
+        "origin": {
+            "doc": "CORS allowed origins for WebSocket connections",
+            "default": "http://localhost:3000",
+            "env": "FRONTEND_URL"
+        }
+    }
+}

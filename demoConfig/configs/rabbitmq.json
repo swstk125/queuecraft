@@ -1,0 +1,73 @@
+{
+    "url" : {
+        "doc" : "the template for amqp connection",
+        "default" : "amqp://{user}:{pass}@{host}:{port}/{vhost}?heartbeat={heartbeat}"
+    },
+
+    "main": {
+        "name" : "main",
+
+        "host" : {
+            "doc": "rabbitmq hosts",
+            "default": "localhost",
+            "env":"RABBITMQ_HOST"
+        },
+        "port" : {
+            "doc": "rabbitmq port number",
+            "format": "int",
+            "env":"RABBITMQ_PORT",
+            "default": 5672
+        },
+
+        "vhost" : "brandcampaignmanager",
+
+        "user" : {
+            "doc": "rabbitmq username",
+            "default": "rabbitmq",
+            "env":"RABBITMQ_USER"
+        },
+
+        "pass" : {
+            "doc" : "rabbitmq password",
+            "env":"RABBITMQ_PASSWORD",
+            "default": "rabbitmq"
+        },
+
+        "heartbeat" : {
+            "doc" : "rabbitmq heartbeat",
+            "default" : 60
+        },
+
+        "reconnectIn" : {
+            "doc" : "reconnect interval in seconds",
+            "default" : 0.2
+        },
+
+        "retryCount" : {
+            "doc" : "retry connection counts",
+            "default" : 1800
+        },
+        "prefetchCount" : {
+            "doc" : "no of jobs to process paralally",
+            "default" : 1
+        },
+
+        "replicaEnabled": {
+            "doc": "cluster/replica enabled ",
+            "default": false,
+            "env":"RABBITMQ_REP_ENABLED"
+        },
+        "replicas": {
+            "hosts": {
+                "doc": "rabbitmq hosts",
+                "default":["localhost", "localhost"],
+                "env":"RABBITMQ_HOSTS"
+            },
+            "ports": {
+                "doc": "rabbitmq ports number",
+                "default": [5672,5672],
+                "env":"RABBITMQ_PORTS"
+            }
+        }
+    }
+}

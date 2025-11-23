@@ -1,0 +1,14 @@
+{
+    "start_date" : {
+        "default" : "2023-06-16T07:30:00.000Z",
+        "env" : "START_DATE"
+    },
+    "end_date":{
+        "default" : "2024-06-30T18:29:00.000Z",
+        "env" : "END_DATE"
+    },
+    "campaign_end_date":{
+        "default" : "2023-06-30T18:29:00.000Z",
+        "env" : "CAMPAIGN_END_DATE"
+    }
+}

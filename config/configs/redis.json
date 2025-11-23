@@ -1,0 +1,7 @@
+{
+    "url": {
+        "doc": "Redis connection URL",
+        "default": "redis://localhost:6379",
+        "env": "REDIS_URL"
+    }
+}

@@ -1,8 +1,9 @@
 const JobService = require("../api/service/JobService");
 const JobHandler = require("./jobHandler.js");
+const config = require("../config");
 
-// Adjustable concurrency level
-const CONCURRENCY = 5; // N concurrent jobs
+// Get concurrency level from config
+const CONCURRENCY = config.get('job.concurrency');
 
 // Utility to split jobs into N-sized batches
 const chunk = (array, size) => {
@@ -26,7 +27,7 @@ const getJobs = async () => {
 
 
 const initializeJobProcessor = async () => {
-  console.log('Job processor initialized');
+  console.log('Job processor initialized with concurrency:', CONCURRENCY);
   let globalJobCounter = 0; // Track global job counter
   
   while (true) {

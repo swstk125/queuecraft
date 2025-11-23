@@ -1,0 +1,27 @@
+{
+    "uploadDir": {
+        "doc": "upload directory",
+        "default": "/config",
+        "env": "UPLOAD_DIR"
+    },
+    "sizeLimit": {
+        "doc": "content size limit in bytes",
+        "default": 41943040,
+        "env":"SIZE_LIMIT"
+    },
+    "durationLimit":{
+        "doc":"duration limit in seconds",
+        "default":30,
+        "env":"DUR_LIMIT"
+    },
+    "GCP_UPLOAD":{
+        "doc": "GCP upload",
+        "default": true,
+        "env": "GCP_UPLOAD"
+    },
+    "AKAMAI_UPLOAD":{
+        "doc": "AKAMAI upload",
+        "default": true,
+        "env": "AKAMAI_UPLOAD"
+    }
+}

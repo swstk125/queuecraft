@@ -5,10 +5,9 @@
 
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+const config = require('../config');
 const jobStatusEmitter = require('./jobStatusEmitter');
 const { subscribeToJobEvents } = require('./jobEventBridge');
-
-const secretKey = process.env.SECRET_KEY || 'secret';
 
 /**
  * Initialize WebSocket server
@@ -18,7 +17,7 @@ const secretKey = process.env.SECRET_KEY || 'secret';
 function initializeWebSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      origin: config.get('websocket.cors.origin'),
       credentials: true
     }
   });
@@ -32,6 +31,7 @@ function initializeWebSocket(httpServer) {
     }
 
     try {
+      const secretKey = config.get('jwt.secret');
       const decoded = jwt.verify(token, secretKey);
       socket.userId = decoded.userId;
       socket.userEmail = decoded.email;

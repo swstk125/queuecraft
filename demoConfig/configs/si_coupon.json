@@ -1,0 +1,19 @@
+{ 
+    "host":{
+            "default" :"https://sitapi.coupon.jio",
+            "env" : "SI_COUPON_HOST"
+    }, 
+    "apikey": {
+      "doc": "apikey url",
+      "default":" eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwaG9uZU5vIjoiOTgyNTYxNTAwMSIsImlhdCI6MTU2NzA2Mjg0Mn0.4N3sSNVS3FEWawFMlTz1dRoGtMEmZat-QykSg3b948g",
+      "env":"SI_COUPON_SECRET"
+    },
+    "secret":{
+      "default":"sit-0f36b751-bd56-4f90-ba65-91fb3debd55b",
+      "env":"SI_COUPON_SECRET"
+    },
+    "businessId":{
+      "default":"929333968286774272777319",
+      "env":"SI_COUPON_BUSINESS_ID"
+    }
+}

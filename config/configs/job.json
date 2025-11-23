@@ -1,0 +1,8 @@
+{
+    "concurrency": {
+        "doc": "Number of concurrent jobs to process",
+        "format": "int",
+        "default": 5,
+        "env": "JOB_CONCURRENCY"
+    }
+}

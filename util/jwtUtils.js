@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const secretKey = process.env.SECRET_KEY || "secret";
+const config = require('../config');
 
 /**
  * Create JWT token
@@ -8,6 +8,7 @@ const secretKey = process.env.SECRET_KEY || "secret";
  * @returns {string} - JWT token
  */
 function createJwtToken(payload, expiresIn = '24h') {
+    const secretKey = config.get('jwt.secret');
     return jwt.sign(payload, secretKey, {
         expiresIn: expiresIn
     });

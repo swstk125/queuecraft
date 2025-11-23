@@ -1,0 +1,42 @@
+{
+    "host": {
+        "doc" : "domain name of akamai server",
+        "default" : "myjio.sftp.upload.akamai.com",
+        "env" : "AKAMAI_SFTP_HOST"
+    },
+    "user": {
+        "doc" : "user id",
+        "default" : "sshacs",
+        "env" : "AKAMAI_SFTP_USER"
+    },
+    "privateKey": {
+        "doc" : "password", 
+        "default" : "/Users/rama.m/Downloads/jiocricket",
+        "env" : "AKAMAI_SFTP_PRIVATE_KEY_PATH"
+    },
+    "path": {
+        "doc" : "location of homepage json",
+        "default":"/714164/ipl2020test",
+        "env" : "AKAMAI_SFTP_PATH"
+    },
+    "url": {
+        "doc" : "public url",
+        "default" : "https://jiokbc.akamaized.net/ipl2020test",
+        "env" : "AKAMAI_URL"
+    },
+    "edgercpath": {
+        "doc": "edgerc PATH",
+        "default": "/centraladmin/.edgerc",
+        "env": "AKAMAI_SFTP_EDGERC_PATH"
+    },
+    "configPath": {
+        "doc": "local config file path",
+        "default": "/home/ubuntu",
+        "env": "LOCAL_FILE_PATH"
+    },
+    "folderName": {
+        "doc": "Folder Name",
+        "default": "coupon",
+        "env": "AKAMAI_FOLDER_NAME"
+    }
+}

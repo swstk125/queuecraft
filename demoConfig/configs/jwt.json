@@ -1,0 +1,37 @@
+{
+    "jwt_secret":{
+        "doc": "jwt secret",
+        "default": "f84e7173-b71b-49e9-badf-414212e3b5e1",
+        "env" : "JWT_SECRET"
+    },
+    "myjio_jwt_sit_secret":{
+        "doc": "jwt secret",
+        "default": "9dcba1b3-0e03-4156-8dda-98800becc377",
+        "env" : "MYJIO_JWT_SECRET"
+    },
+    "jiotv_jwt_secret":{
+        "doc": "jiotv jwt secret",
+        "default": "f84e7173-b71b-49e9-badf-414212e3b5e1",
+        "env" : "JIOTV_JWT_SECRET"
+    },
+    "voot_jwt_secret":{
+        "doc": "voot jwt secret",
+        "default": "vootZCxQRdFEt8PGb0sYXDHfDKS4hFxCyenvIAhKaHNsr7JDz",
+        "env" : "VOOT_JWT_SECRET"
+    },
+    "cadbury_jwt_secret":{
+        "doc": "cadbury jwt secret",
+        "default":"3b158818-042d-4d87-a8d0-d32a45a15d57",
+        "env":"CADBURY_JWT_SECRET"
+    },
+    "fivestar_jwt_secret":{
+        "doc": "fivestar jwt secret",
+        "default":"7b158818-042d-4d89-a8d0-d32a45a15d57",
+        "env":"FIVESTAR_JWT_SECRET"
+    },
+    "data_clear_secret":{
+        "doc": "data clear jwt secret",
+        "default":"1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
+        "env":"DATA_CLEAR_JWT_SECRET"
+    }
+}

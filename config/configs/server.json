@@ -1,0 +1,8 @@
+{
+    "port": {
+        "doc": "API server port number",
+        "format": "port",
+        "default": 2000,
+        "env": "PORT"
+    }
+}

@@ -1,0 +1,22 @@
+{
+    "incommingMessageTopic": {
+        "default": "ipl-chat-incoming-message-pub",
+        "env": "PUB_SUB_INCOMING_MSG_TOPIC"
+    },
+    "incommingMessagePriorityTopic": {
+        "default": "ipl-chat-incoming-message-priority-pub",
+        "env": "PUB_SUB_INCOMING_PRIORITY_MSG_TOPIC"
+    },
+    "reportMessageTopic": {
+        "default": "ipl-chat-report-message-pub",
+        "env": "PUB_SUB_REPORT_MSG_TOPIC"
+    },
+    "loggingTopic":{
+        "default": "jioengage_brand_engagement",
+        "env": "PUB_SUB_LOGGING_TOPIC"
+    },
+    "btLoggingTopic":{
+        "default": "jioengage-bigticket-engagements-",
+        "env": "BT_PUB_SUB_LOGGING_TOPIC"
+    }
+}
