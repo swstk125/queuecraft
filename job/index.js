@@ -1,6 +1,7 @@
 const JobService = require("../api/service/JobService");
 const JobHandler = require("./jobHandler.js");
 const config = require("../config");
+const logger = require("../util/logger");
 
 // Get concurrency level from config
 const CONCURRENCY = config.get('job.concurrency');
@@ -16,10 +17,11 @@ const chunk = (array, size) => {
 
 const getJobs = async () => {
   const data = await JobService.getJobs({}, {status: "pending"});
-  if (data.success) {
-    for (const job of data.jobs) {
-      console.log(job);
-    }
+  if (data.success && data.jobs.length > 0) {
+    logger.debug('Fetched pending jobs', { 
+      count: data.jobs.length,
+      jobIds: data.jobs.map(j => j._id).slice(0, 5) // Log first 5 job IDs
+    });
   }
   return data;
 }
@@ -27,7 +29,11 @@ const getJobs = async () => {
 
 
 const initializeJobProcessor = async () => {
-  console.log('Job processor initialized with concurrency:', CONCURRENCY);
+  logger.info('Job processor initialized', { 
+    concurrency: CONCURRENCY,
+    service: 'jobProcessor'
+  });
+  
   let globalJobCounter = 0; // Track global job counter
   
   while (true) {
@@ -36,6 +42,12 @@ const initializeJobProcessor = async () => {
 
       if (pendingJobs.success && pendingJobs.jobs.length > 0) {
         const batches = chunk(pendingJobs.jobs, CONCURRENCY);
+
+        logger.debug('Processing job batches', {
+          totalJobs: pendingJobs.jobs.length,
+          batchCount: batches.length,
+          concurrency: CONCURRENCY
+        });
 
         for (const batch of batches) {
           await Promise.all(
@@ -50,7 +62,9 @@ const initializeJobProcessor = async () => {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     } catch (error) {
-      console.error('Error in job processor loop:', error);
+      logger.error('Error in job processor loop', error, {
+        service: 'jobProcessor'
+      });
       // Wait before retrying to prevent rapid error loops
       await new Promise(resolve => setTimeout(resolve, 5000));
     }

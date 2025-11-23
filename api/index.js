@@ -9,19 +9,23 @@ const app = express();
 const loginRouter = require("./rest/login.rest");
 const jobRouter = require("./rest/job.rest");
 const userRouter = require("./rest/user.rest");
+const metricsRouter = require("./rest/metrics.rest");
 
 // Middleware to authenticate JWT tokens
 const jwtMiddleware = require("./middleware/authmiddleware");
+const traceMiddleware = require("./middleware/traceMiddleware");
 
 // Middleware to parse JSON bodies
 app.use(express.json());
-// app.use(jwtMiddleware);
 
+// Add trace middleware to all requests
+app.use(traceMiddleware());
 
 // use the routers
 app.use("/login", jwtMiddleware(), loginRouter);
 app.use("/job", jwtMiddleware(), jobRouter);
 app.use("/user", userRouter);
+app.use("/metrics", jwtMiddleware(), metricsRouter);
 // health check
 app.get("/sync", (req, res) => {
   try {

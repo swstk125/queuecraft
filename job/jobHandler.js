@@ -2,6 +2,8 @@ const JobService = require("../api/service/JobService");
 const jobStatusEmitter = require("../websocket/jobStatusEmitter");
 const getModel = require("../db/model");
 const cache = require("../util/cacheUtils");
+const logger = require("../util/logger");
+const metricsService = require("../util/metricsService");
 
 // Helper to fetch updated job from database (with cache invalidation)
 const getUpdatedJob = async (jobId) => {
@@ -27,24 +29,27 @@ const getUpdatedJob = async (jobId) => {
 };
 
 const leaseJobs = async (jobData, jobCounter) => {
-  const { _id: jobId, name } = jobData;
+  const { _id: jobId, name, ownerId } = jobData;
   let status = "failed";
+  const startTime = Date.now();
 
   try {
+    // Update job status to running
     await JobService.updateJob(jobData._id, {status: "running"});
     
     // Fetch updated job and emit event
     const updatedJob = await getUpdatedJob(jobData._id);
     if (updatedJob) {
       jobStatusEmitter.emitJobStatusUpdated(updatedJob, 'pending');
-      console.log(`📤 Emitted: Job ${jobId} → running`);
+      
+      // Record metrics and log
+      await metricsService.recordJobStarted();
+      logger.logJobEvent('start', updatedJob, { jobCounter });
     }
     
     // Wait for the job to complete (10 seconds)
     await new Promise((resolve) => {
       setTimeout(() => {
-        console.log(`Job ${jobId} (${name || 'unnamed'}) leased for 10 seconds`);
-        
         // Deterministic failure logic for assignment demonstration:
         // 1. Jobs with "fail" in name ALWAYS fail (for DLQ demonstration)
         // 2. Otherwise, every 3rd job fails (for general retry demonstration)
@@ -52,34 +57,46 @@ const leaseJobs = async (jobData, jobCounter) => {
         
         if(shouldAlwaysFail) {
           status = "failed";
-          console.log(`Job ${jobId} (${name}) - marked to always fail for DLQ demo`);
+          logger.debug('Job marked to fail', { 
+            jobId, 
+            name, 
+            reason: 'name contains "fail"' 
+          });
         } else if(jobCounter % 3 == 0) {
           status = "failed";
-          console.log(`Job ${jobId} (${name}) - failed (counter: ${jobCounter})`);
+          logger.debug('Job failed', { 
+            jobId, 
+            name, 
+            jobCounter, 
+            reason: 'every 3rd job fails' 
+          });
         } else {
           status = "success";
-          console.log(`Job ${jobId} (${name}) - succeeded`);
+          logger.debug('Job succeeded', { jobId, name, jobCounter });
         }
         resolve();
       }, 10000);
     });
 
+    // Record processing time
+    const processingTime = Date.now() - startTime;
+    await metricsService.recordJobProcessingTime(jobId, processingTime);
+
     // Process the result after the timeout completes
     if(status == "failed") {
       await retryFailedJobs(jobData, jobCounter);
     } else if(status == "success") {
-      await ackJobs(jobData);
+      await ackJobs(jobData, processingTime);
     }
   } catch (error) {
-    console.error('Error leasing job:', error);
+    logger.error('Error leasing job', error, { jobId, name, ownerId });
     status = "failed";
     await retryFailedJobs(jobData, jobCounter);
   }
 }
 
-const ackJobs = async (jobData) => {
-  const { _id: jobId } = jobData;
-  console.log(`Job ${jobId} acknowledged`);
+const ackJobs = async (jobData, processingTime) => {
+  const { _id: jobId, name, ownerId } = jobData;
   try {
     await JobService.updateJob(jobData._id, {status: "completed"});
     
@@ -88,15 +105,20 @@ const ackJobs = async (jobData) => {
     if (completedJob) {
       jobStatusEmitter.emitJobCompleted(completedJob);
       jobStatusEmitter.emitJobStatusUpdated(completedJob, 'running');
-      console.log(`📤 Emitted: Job ${jobId} → completed`);
+      
+      // Record metrics and log
+      await metricsService.recordJobCompleted();
+      logger.logJobEvent('finish', completedJob, { 
+        processingTime: `${processingTime}ms` 
+      });
     }
   } catch (error) {
-    console.error('Error acknowledging job:', error);
+    logger.error('Error acknowledging job', error, { jobId, name, ownerId });
   }
 }
 
 const retryFailedJobs = async (jobData, jobCounter) => {
-  const { _id: jobId } = jobData;
+  const { _id: jobId, name, ownerId } = jobData;
   let retryCount = jobData.retryCount || 0;
   try {
     retryCount++;
@@ -114,19 +136,28 @@ const retryFailedJobs = async (jobData, jobCounter) => {
       const retryJob = await getUpdatedJob(jobData._id);
       if (retryJob) {
         jobStatusEmitter.emitJobStatusUpdated(retryJob, 'running');
-        console.log(`📤 Emitted: Job ${jobId} → pending (retry ${retryCount}/3)`);
+        
+        // Record metrics and log
+        await metricsService.recordJobRetry();
+        logger.logJobEvent('retry', retryJob, { 
+          retryCount, 
+          maxRetries: 3,
+          reason: 'Job execution failed'
+        });
       }
-      
-      console.log(`Job ${jobId} marked for retry (attempt ${retryCount}/3)`);
     }
   } catch (error) {
-    console.error('Error retrying failed job:', error);
+    logger.error('Error retrying failed job', error, { 
+      jobId, 
+      name, 
+      ownerId, 
+      retryCount 
+    });
   }
 }
 
 const dlqJobs = async (jobData) => {
-  const { _id: jobId } = jobData;
-  console.log(`Job ${jobId} DLQed`);
+  const { _id: jobId, name, ownerId } = jobData;
   try {
     await JobService.updateJob(jobData._id, {status: "dlq"});
     
@@ -135,10 +166,16 @@ const dlqJobs = async (jobData) => {
     if (dlqJob) {
       jobStatusEmitter.emitJobMovedToDLQ(dlqJob);
       jobStatusEmitter.emitJobStatusUpdated(dlqJob, 'running');
-      console.log(`📤 Emitted: Job ${jobId} → dlq`);
+      
+      // Record metrics and log
+      await metricsService.recordJobDLQ();
+      logger.logJobEvent('dlq', dlqJob, { 
+        reason: 'Max retries exceeded',
+        maxRetries: 3
+      });
     }
   } catch (error) {
-    console.error('Error DLQing job:', error);
+    logger.error('Error moving job to DLQ', error, { jobId, name, ownerId });
   }
 }
 

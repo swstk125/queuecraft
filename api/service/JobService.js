@@ -1,6 +1,8 @@
 const getModel = require("../../db/model");
 const jobStatusEmitter = require("../../websocket/jobStatusEmitter");
 const cache = require("../../util/cacheUtils");
+const logger = require("../../util/logger");
+const metricsService = require("../../util/metricsService");
 
 // Rate limiting configuration
 const MAX_ACTIVE_JOBS_PER_USER = 5;
@@ -71,6 +73,17 @@ class JobService{
       if (activeJobCount >= MAX_ACTIVE_JOBS_PER_USER) {
         const error = new Error(`Rate limit exceeded. Maximum ${MAX_ACTIVE_JOBS_PER_USER} active jobs allowed.`);
         error.statusCode = 429;
+        
+        // Record rate limit hit
+        await metricsService.recordRateLimitHit();
+        
+        logger.warn('Job creation rate limit exceeded', {
+          userId,
+          activeJobCount,
+          maxAllowed: MAX_ACTIVE_JOBS_PER_USER,
+          jobName: payload.name
+        });
+        
         throw error;
       }
       
@@ -89,14 +102,27 @@ class JobService{
       const jobObject = job.toObject ? job.toObject() : job;
       await cache.set(cache.getJobByIdKey(job._id), jobObject, 300);
       
+      // Record metrics
+      await metricsService.recordJobSubmitted();
+      
+      // Log job submission
+      logger.logJobEvent('submit', jobObject, { userId });
+      
       // Emit job created event for WebSocket
       jobStatusEmitter.emitJobCreated(jobObject, userId);
-      console.log(`📤 Emitted: Job created ${job._id}`);
+      
+      logger.debug('Job created event emitted', { 
+        jobId: job._id, 
+        userId 
+      });
       
       return {success: true, job: job};
       
     } catch (error) {
-      console.error('Error creating job:', error);
+      logger.error('Error creating job', error, {
+        userId: authInfo?.userId,
+        jobName: payload?.name
+      });
       throw error;
     }
   }
@@ -119,6 +145,10 @@ class JobService{
         const cachedJobs = await cache.get(cacheKey);
         
         if (cachedJobs) {
+          logger.debug('Jobs fetched from cache', { 
+            userId: authInfo.userId, 
+            count: cachedJobs.length 
+          });
           return {success: true, jobs: cachedJobs};
         }
       }
@@ -133,9 +163,18 @@ class JobService{
         await cache.set(cacheKey, jobsArray, 60); // Cache for 60 seconds
       }
       
+      logger.debug('Jobs fetched from database', { 
+        userId: authInfo?.userId, 
+        count: jobsArray.length,
+        filter 
+      });
+      
       return {success: true, jobs: jobsArray};
     } catch (error) {
-      console.error('Error getting jobs:', error);
+      logger.error('Error getting jobs', error, {
+        userId: authInfo?.userId,
+        query
+      });
       throw error;
     }
   }
@@ -159,9 +198,16 @@ class JobService{
       }
       await cache.del(cache.getJobByIdKey(jobId));
       
+      logger.debug('Job updated', {
+        jobId,
+        oldStatus: existingJob?.status,
+        newStatus: payload.status,
+        ownerId: existingJob?.ownerId
+      });
+      
       return {success: true, job: job};
     } catch (error) {
-      console.error('Error updating job:', error);
+      logger.error('Error updating job', error, { jobId });
       throw error;
     }
   }
@@ -178,6 +224,7 @@ class JobService{
       const cachedJob = await cache.get(cacheKey);
       
       if (cachedJob) {
+        logger.debug('Job fetched from cache', { jobId });
         return cachedJob;
       }
       
@@ -186,12 +233,14 @@ class JobService{
       if (job) {
         const jobObject = job.toObject ? job.toObject() : job;
         await cache.set(cacheKey, jobObject, 300);
+        logger.debug('Job fetched from database', { jobId });
         return jobObject;
       }
       
+      logger.warn('Job not found', { jobId });
       return null;
     } catch (error) {
-      console.error('Error getting job by ID:', error);
+      logger.error('Error getting job by ID', error, { jobId });
       throw error;
     }
   }

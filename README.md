@@ -15,6 +15,7 @@ A production-ready job queue system with real-time WebSocket updates and a moder
 - [Dashboard UI](#-dashboard-ui)
 - [API Documentation](#-api-documentation)
 - [Rate Limiting](#-rate-limiting)
+- [Observability](#-observability)
 - [Testing](#-testing)
 - [Deployment](#-deployment)
 - [Troubleshooting](#-troubleshooting)
@@ -32,6 +33,7 @@ A production-ready job queue system with real-time WebSocket updates and a moder
 - ✅ **JWT Authentication**: Secure API access with Bearer tokens
 - ✅ **MongoDB Storage**: Persistent job and user data
 - ✅ **Concurrent Processing**: Configurable worker pool (default: 5 workers)
+- ✅ **Comprehensive Observability**: Structured logging with trace IDs and real-time metrics
 
 ### Frontend Dashboard Features
 - ✅ **Real-time Job Monitoring**: Live WebSocket updates for all job status changes
@@ -573,6 +575,104 @@ const MAX_ACTIVE_JOBS_PER_USER = 5;
 - ✅ Clear error messages
 - ✅ Fast with compound indexes
 
+## 📊 Observability
+
+QueueCraft includes comprehensive observability features for monitoring, debugging, and analyzing your job queue system in production.
+
+### Features
+
+#### 1. Structured Logging with Trace IDs
+All logs are formatted as JSON with consistent fields for easy parsing and searching:
+
+```json
+{
+  "timestamp": "2025-11-23T14:39:08.538Z",
+  "level": "INFO",
+  "service": "queuecraft",
+  "message": "Job submitted",
+  "event": "submit",
+  "jobId": "69231c8c041c89c391ca705e",
+  "traceId": "550e8400-e29b-41d4-a716-446655440000",
+  "userId": "user-123"
+}
+```
+
+**Every API request gets a unique trace ID** that appears in all related logs, making it easy to track requests across services.
+
+#### 2. Job Event Logging
+All major job lifecycle events are automatically logged:
+- **submit**: Job created
+- **start**: Job processing started
+- **finish**: Job completed successfully
+- **fail**: Job failed
+- **retry**: Job scheduled for retry
+- **dlq**: Job moved to Dead Letter Queue
+
+#### 3. Real-time Metrics API
+Monitor system health with the `/metrics` endpoint:
+
+```bash
+curl -H "Authorization: Bearer <token>" http://localhost:2000/metrics
+```
+
+**Available Metrics:**
+- `jobs:total` - Total jobs submitted
+- `jobs:pending` - Current pending jobs
+- `jobs:running` - Current running jobs
+- `jobs:completed` - Total completed jobs
+- `jobs:failed` - Total failed jobs
+- `jobs:retries` - Total retry attempts
+- `jobs:dlq` - Jobs in Dead Letter Queue
+- `jobs:success_rate` - Success rate percentage
+- `jobs:failure_rate` - Failure rate percentage
+- `rate_limit:hits` - Rate limit violations
+
+#### 4. Request/Response Logging
+Every API request and response is automatically logged with:
+- Request method and path
+- User ID (if authenticated)
+- Trace ID
+- Response status code
+- Request duration
+
+### Usage Examples
+
+**Search logs by job ID:**
+```bash
+grep "jobId.*abc123" logs.json | jq .
+```
+
+**Search logs by trace ID:**
+```bash
+grep "traceId.*550e8400" logs.json | jq .
+```
+
+**Monitor metrics:**
+```bash
+# Get current metrics
+curl -H "Authorization: Bearer $TOKEN" http://localhost:2000/metrics | jq .
+
+# Watch metrics in real-time
+watch -n 5 'curl -s -H "Authorization: Bearer $TOKEN" http://localhost:2000/metrics | jq .metrics'
+```
+
+**Pass custom trace ID:**
+```bash
+curl -H "X-Trace-Id: my-custom-trace-123" \
+     -H "Authorization: Bearer $TOKEN" \
+     http://localhost:2000/job/create
+```
+
+### Integration with Monitoring Tools
+
+The structured logging and metrics are designed to work seamlessly with:
+- **ELK Stack** (Elasticsearch, Logstash, Kibana)
+- **Datadog** / **New Relic**
+- **Prometheus** / **Grafana**
+- **Splunk**
+
+📖 **For detailed observability documentation, see [OBSERVABILITY.md](./OBSERVABILITY.md)**
+
 ## 🧪 Testing
 
 ### Run Tests
@@ -871,14 +971,16 @@ queuecraft/
 │   ├── rest/                    # REST endpoints
 │   │   ├── job.rest.js         # Job CRUD endpoints
 │   │   ├── login.rest.js       # Authentication
-│   │   └── user.rest.js        # User management
+│   │   ├── user.rest.js        # User management
+│   │   └── metrics.rest.js     # Metrics API endpoint
 │   ├── service/                 # Business logic
 │   │   ├── JobService.js       # Job operations
 │   │   ├── LoginService.js     # Authentication logic
 │   │   └── UserService.js      # User operations
 │   ├── middleware/              # Custom middleware
 │   │   ├── authmiddleware.js   # JWT verification
-│   │   └── rateLimitMiddleware.js # Rate limiting
+│   │   ├── rateLimitMiddleware.js # Rate limiting
+│   │   └── traceMiddleware.js  # Trace ID injection
 │   └── index.js                # Express app setup
 ├── db/                          # Database layer
 │   ├── schema/                 # Mongoose schemas
@@ -893,7 +995,10 @@ queuecraft/
 │   ├── websocketServer.js      # Socket.IO server + Redis sub
 │   └── jobEventBridge.js       # Redis publisher for events
 ├── util/                        # Utilities
-│   └── jwtUtils.js             # JWT helpers
+│   ├── jwtUtils.js             # JWT helpers
+│   ├── logger.js               # Structured logging with trace IDs
+│   ├── metricsService.js       # Metrics tracking and reporting
+│   └── cacheUtils.js           # Redis caching utilities
 ├── frontend/                    # React dashboard
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
@@ -935,7 +1040,8 @@ queuecraft/
 ├── appServer.js                # API server entry
 ├── jobServer.js                # Job processor entry
 ├── package.json                # Backend dependencies
-└── README.md                   # This file
+├── README.md                   # This file
+└── OBSERVABILITY.md            # Observability documentation
 ```
 
 ## 📊 Performance Metrics
