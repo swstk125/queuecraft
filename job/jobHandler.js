@@ -1,13 +1,25 @@
 const JobService = require("../api/service/JobService");
 const jobStatusEmitter = require("../websocket/jobStatusEmitter");
 const getModel = require("../db/model");
+const cache = require("../util/cacheUtils");
 
-// Helper to fetch updated job from database
+// Helper to fetch updated job from database (with cache invalidation)
 const getUpdatedJob = async (jobId) => {
   try {
+    // Invalidate cache first to ensure fresh data
+    await cache.del(cache.getJobByIdKey(jobId));
+    
     const jobModel = getModel("job");
     const job = await jobModel.findById(jobId);
-    return job ? job.toObject() : null;
+    
+    // Cache the updated job
+    if (job) {
+      const jobObject = job.toObject();
+      await cache.set(cache.getJobByIdKey(jobId), jobObject, 300);
+      return jobObject;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error fetching updated job:', error);
     return null;
