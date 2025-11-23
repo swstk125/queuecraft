@@ -45,12 +45,52 @@ A production-ready job queue system with real-time WebSocket updates and a moder
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Option 1: Docker (Recommended) 🐳
+
+Run the entire stack with one command!
+
+```bash
+# Clone the repository
+git clone https://github.com/swstk125/queuecraft.git
+cd queuecraft
+
+# Start all services (MongoDB, Redis, API, Worker, Frontend)
+docker-compose up -d
+
+# Create a user
+docker exec -it queuecraft-api sh -c '
+curl -X POST http://localhost:2000/user/create \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"admin\",\"email\":\"admin@example.com\",\"password\":\"admin123\"}"
+'
+
+# Access the dashboard at http://localhost:3000
+# API available at http://localhost:2000
+```
+
+**Useful Docker commands:**
+```bash
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+
+# Rebuild after code changes
+docker-compose up -d --build
+
+# View running containers
+docker-compose ps
+```
+
+### Option 2: Local Development
+
+**Prerequisites:**
 - Node.js v18+
 - MongoDB (local or Docker)
 - Redis (local or Docker)
 
-### 1. Install Dependencies
+#### 1. Install Dependencies
 
 ```bash
 # Backend dependencies
@@ -60,11 +100,11 @@ npm install
 cd frontend && npm install && cd ..
 ```
 
-### 2. Start MongoDB and Redis
+#### 2. Start MongoDB and Redis
 
-**Option A: Using Docker Compose (Recommended)**
+**Option A: Using Docker Compose (Infrastructure only)**
 ```bash
-docker-compose up -d
+docker-compose up -d mongodb redis
 ```
 
 **Option B: Using Docker manually**
@@ -85,7 +125,7 @@ mongod
 redis-server
 ```
 
-### 3. Start Backend Services
+#### 3. Start Backend Services
 
 **Terminal 1: API Server (with WebSocket)**
 ```bash
@@ -115,7 +155,7 @@ connected to redis : redis://localhost:6379
 Job processor initialized
 ```
 
-### 4. Create a User
+#### 4. Create a User
 
 ```bash
 curl -X POST http://localhost:2000/user/create \
@@ -127,7 +167,7 @@ curl -X POST http://localhost:2000/user/create \
   }'
 ```
 
-### 5. Start Frontend Dashboard
+#### 5. Start Frontend Dashboard
 
 **Terminal 3: Frontend Dev Server**
 ```bash
@@ -141,7 +181,7 @@ VITE v5.0.8  ready in 500 ms
 ➜  Local:   http://localhost:3000/
 ```
 
-### 6. Access the Dashboard
+#### 6. Access the Dashboard
 
 1. Open `http://localhost:3000` in your browser
 2. Login with:
@@ -149,7 +189,7 @@ VITE v5.0.8  ready in 500 ms
    - Password: `admin123`
 3. You should see a **green "Connected"** indicator in the top right!
 
-### 7. Test Real-time Updates
+#### 7. Test Real-time Updates
 
 1. Click **"Create Job"** button in the dashboard
 2. Enter a job name and click **"Create"**
@@ -562,7 +602,85 @@ Coverage:    High coverage across critical paths
 
 ## 🚀 Deployment
 
-### Production Environment Variables
+### Option 1: Docker Deployment (Recommended) 🐳
+
+#### Production with Docker Compose
+
+**1. Create `.env` file:**
+```bash
+# .env
+SECRET_KEY=your-super-secure-secret-key-change-this
+FRONTEND_URL=https://your-frontend-domain.com
+```
+
+**2. Deploy the stack:**
+```bash
+# Build and start all services
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# Check service status
+docker-compose ps
+```
+
+**3. Create initial user:**
+```bash
+docker exec -it queuecraft-api sh -c '
+curl -X POST http://localhost:2000/user/create \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"admin\",\"email\":\"admin@example.com\",\"password\":\"admin123\"}"
+'
+```
+
+#### Development with Docker
+
+For local development with hot-reload:
+
+```bash
+# Use development docker-compose
+docker-compose -f docker-compose.dev.yml up
+
+# All code changes will auto-reload!
+```
+
+#### Docker Services Overview
+
+| Service | Port | Description |
+|---------|------|-------------|
+| MongoDB | 27017 | Database |
+| Redis | 6379 | Queue + Pub/Sub |
+| API | 2000 | Express + WebSocket |
+| Worker | - | Job Processor |
+| Frontend | 3000 | React Dashboard |
+
+#### Useful Docker Commands
+
+```bash
+# View logs for specific service
+docker-compose logs -f api
+docker-compose logs -f worker
+
+# Restart a service
+docker-compose restart api
+
+# Scale workers
+docker-compose up -d --scale worker=3
+
+# Stop and remove all containers
+docker-compose down
+
+# Stop and remove with volumes (clears data)
+docker-compose down -v
+
+# Execute command in container
+docker exec -it queuecraft-api sh
+```
+
+### Option 2: Traditional Deployment
+
+#### Production Environment Variables
 
 **Backend**
 ```bash
@@ -588,7 +706,7 @@ FRONTEND_URL=https://your-frontend-domain.com
 VITE_API_BASE_URL=https://api.yourdomain.com
 ```
 
-### Deploy Backend with PM2
+#### Deploy Backend with PM2
 
 ```bash
 # Install PM2
@@ -642,61 +760,42 @@ aws s3 sync dist/ s3://your-bucket-name --delete
 aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
 ```
 
-### Docker Compose (Full Stack)
+#### Docker Compose Configuration
 
-```yaml
-version: '3.8'
+The project includes a complete Docker Compose configuration:
 
-services:
-  mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
+**Files:**
+- `docker-compose.yml` - Production deployment
+- `docker-compose.dev.yml` - Development with hot-reload
+- `Dockerfile` - Backend (API + Worker)
+- `frontend/Dockerfile` - Frontend (React + Nginx)
 
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+**Features:**
+- ✅ Health checks for all services
+- ✅ Automatic restart policies
+- ✅ Proper networking and dependencies
+- ✅ Volume persistence for MongoDB and Redis
+- ✅ WebSocket support configured
+- ✅ Environment variable management
 
-  api:
-    build: .
-    command: node appServer.js
-    ports:
-      - "2000:2000"
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/queuecraft
-      - REDIS_URL=redis://redis:6379
-      - SECRET_KEY=${SECRET_KEY}
-    depends_on:
-      - mongodb
-      - redis
+**Production Deployment:**
+```bash
+# Start all services
+docker-compose up -d
 
-  worker:
-    build: .
-    command: node jobServer.js
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/queuecraft
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - mongodb
-      - redis
+# Scale workers for higher throughput
+docker-compose up -d --scale worker=5
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - api
+# Monitor
+docker-compose logs -f api worker
+```
 
-volumes:
-  mongodb_data:
-  redis_data:
+**Development Deployment:**
+```bash
+# Hot-reload for all services
+docker-compose -f docker-compose.dev.yml up
+
+# Code changes auto-reload without rebuild!
 ```
 
 ## 🔧 Troubleshooting

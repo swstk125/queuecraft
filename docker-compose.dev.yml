@@ -1,0 +1,117 @@
+version: '3.8'
+
+# Development docker-compose with hot-reload and volume mounts
+# Usage: docker-compose -f docker-compose.dev.yml up
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:latest
+    container_name: queuecraft-mongodb-dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data_dev:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=queuecraft
+    networks:
+      - queuecraft-network-dev
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/queuecraft --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (Queue + Pub/Sub)
+  redis:
+    image: redis:latest
+    container_name: queuecraft-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - queuecraft-network-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # API Server (Development with hot-reload)
+  api-dev:
+    image: node:18-alpine
+    container_name: queuecraft-api-dev
+    working_dir: /app
+    ports:
+      - "2000:2000"
+    volumes:
+      - ./:/app
+      - /app/node_modules  # Anonymous volume for node_modules
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017/queuecraft
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=dev-secret-key
+      - PORT=2000
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - queuecraft-network-dev
+    command: sh -c "npm install && node appServer.js"
+
+  # Job Processor (Development with hot-reload)
+  worker-dev:
+    image: node:18-alpine
+    container_name: queuecraft-worker-dev
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017/queuecraft
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=dev-secret-key
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - queuecraft-network-dev
+    command: sh -c "npm install && node jobServer.js"
+
+  # Frontend Dashboard (Development with hot-reload)
+  frontend-dev:
+    image: node:18-alpine
+    container_name: queuecraft-frontend-dev
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:2000
+    depends_on:
+      - api-dev
+    networks:
+      - queuecraft-network-dev
+    command: sh -c "npm install && npm run dev -- --host"
+
+volumes:
+  mongodb_data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+
+networks:
+  queuecraft-network-dev:
+    driver: bridge
+

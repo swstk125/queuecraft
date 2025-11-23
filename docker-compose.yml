@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # MongoDB Database
   mongodb:
     image: mongo:latest
     container_name: queuecraft-mongodb
@@ -17,7 +18,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
+  # Redis (Queue + Pub/Sub)
   redis:
     image: redis:latest
     container_name: queuecraft-redis
@@ -33,6 +36,81 @@ services:
       timeout: 5s
       retries: 5
     command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  # API Server (with WebSocket)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: queuecraft-api
+    ports:
+      - "2000:2000"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/queuecraft
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - PORT=2000
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - queuecraft-network
+    command: node appServer.js
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:2000/sync', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Job Processor (Worker)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: queuecraft-worker
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/queuecraft
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - queuecraft-network
+    command: node jobServer.js
+    restart: unless-stopped
+
+  # Frontend Dashboard
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: queuecraft-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:2000
+    depends_on:
+      - api
+    networks:
+      - queuecraft-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   mongodb_data:
@@ -43,4 +121,3 @@ volumes:
 networks:
   queuecraft-network:
     driver: bridge
-
