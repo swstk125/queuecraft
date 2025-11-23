@@ -1,12 +1,22 @@
 {
   "name": "queuecraft",
   "version": "1.0.0",
-  "description": "Distributed Task Queue & Job Processor",
-  "main": "index.js",
+  "description": "Distributed Task Queue & Job Processor with Dashboard UI",
+  "main": "appServer.js",
   "scripts": {
     "test": "jest --coverage --verbose",
     "test:watch": "jest --watch",
-    "test:unit": "jest --testPathPattern=test/unit"
+    "test:unit": "jest --testPathPattern=test/unit",
+    "start:api": "node appServer.js",
+    "start:worker": "node jobServer.js",
+    "dev:api": "nodemon appServer.js",
+    "dev:worker": "nodemon jobServer.js",
+    "frontend:install": "cd frontend && npm install",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "setup": "./start-dev.sh"
   },
   "repository": {
     "type": "git",
