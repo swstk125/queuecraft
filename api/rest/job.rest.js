@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 
 const JobService = require("../service/JobService");
+const rateLimitMiddleware = require("../middleware/rateLimitMiddleware");
+
+// Apply rate limiting: max 10 job creation attempts per minute per user
+router.use(rateLimitMiddleware());
 
 // POST /job/create - Create a new job with rate limiting
 router.post('/create', async (req, res) => {
