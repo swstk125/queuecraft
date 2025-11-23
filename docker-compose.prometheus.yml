@@ -83,6 +83,22 @@ services:
       - queuecraft-network
     command: node jobServer.js
 
+  # Frontend Dashboard
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: queuecraft-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:2000
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - queuecraft-network
+
   # MongoDB
   mongodb:
     image: mongo:latest
