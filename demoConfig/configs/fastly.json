@@ -1,7 +1,0 @@
-{
-    "privateKey": {
-        "doc": "password",
-        "default": "Yf6E3QLes7Pc0S7lDeZOgqymZZiUpAWT",
-        "env": "FASTLY_PRIVATE_KEY_PATH"
-    }
-}
