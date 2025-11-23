@@ -15,6 +15,10 @@ const jobSchema = new mongoose.Schema({
     default: "pending",
     index: true  // Index for faster queries by status
   },
+  retryCount: {
+    type: Number,
+    default: 0
+  },
   con: {
     type: Date, 
     default: Date.now
