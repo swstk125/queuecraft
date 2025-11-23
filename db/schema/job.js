@@ -1,17 +1,19 @@
 const mongoose = require("mongoose");
 
-const job = {
+const jobSchema = new mongoose.Schema({
   name: {
     type: String,
   },
   ownerId: {
     type: String,
-    required: true
+    required: true,
+    index: true  // Index for faster queries by owner
   },
   status: {
     type: String,
     enum: ["pending", "running", "completed", "dlq"],
-    default: "pending"
+    default: "pending",
+    index: true  // Index for faster queries by status
   },
   con: {
     type: Date, 
@@ -21,6 +23,13 @@ const job = {
     type: Date, 
     default: Date.now
   },
-}
+});
 
-module.exports = mongoose.model("job", new mongoose.Schema(job));
+// Compound index for optimal rate limiting query performance
+// This index is specifically optimized for counting active jobs by owner
+jobSchema.index({ ownerId: 1, status: 1 });
+
+// Index for cleanup and monitoring queries
+jobSchema.index({ status: 1, con: 1 });
+
+module.exports = mongoose.model("job", jobSchema);
