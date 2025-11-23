@@ -6,6 +6,7 @@ class LoginService {
 
   async login(payload) {
     const { email, password } = payload;
+    console.log(email, password);
     const user = await UserService.getUserByEmail(email);
     if (!user) {
       throw new Error('User not found');

@@ -21,7 +21,7 @@ class UserService {
 
     async getUserByEmail(email){
       try {
-        return this.userModel.findOne(email);
+        return this.userModel.findOne({ email });
       } catch (error) {
         console.log(error);
       }
