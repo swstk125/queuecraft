@@ -357,10 +357,6 @@ Compatible with:
 - **Prometheus** + **Grafana**
 - **Splunk**
 
-📖 **Detailed Documentation:**
-- [OBSERVABILITY.md](./OBSERVABILITY.md) - Complete observability guide
-- [PROMETHEUS_SETUP.md](./PROMETHEUS_SETUP.md) - Prometheus setup instructions
-
 ## 🧪 Testing
 
 ```bash
@@ -555,8 +551,7 @@ queuecraft/
 ├── docker-compose.prometheus.yml # With Prometheus + Grafana
 ├── prometheus.yml               # Prometheus configuration
 ├── appServer.js                 # API server entry point
-├── jobServer.js                 # Job processor entry point
-└── OBSERVABILITY.md             # Detailed observability docs
+└── jobServer.js                 # Job processor entry point
 ```
 
 ## 📊 Performance & Configuration
