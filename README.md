@@ -1,6 +1,6 @@
-# QueueCraft - Distributed Task Queue & Job Processor
+# QueueCraft - Distributed Job Queue System
 
-A production-ready job queue system with real-time WebSocket updates and a modern React dashboard for monitoring and managing distributed tasks.
+A production-ready job queue system with real-time monitoring, comprehensive observability, and a modern React dashboard.
 
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 ![Tests](https://img.shields.io/badge/tests-23%20passing-success)
@@ -11,48 +11,43 @@ A production-ready job queue system with real-time WebSocket updates and a moder
 - [Features](#-features)
 - [Quick Start](#-quick-start)
 - [Architecture](#️-architecture)
-- [Real-time Updates](#-real-time-updates-websocket)
-- [Dashboard UI](#-dashboard-ui)
 - [API Documentation](#-api-documentation)
+- [Observability & Monitoring](#-observability--monitoring)
 - [Rate Limiting](#-rate-limiting)
-- [Observability](#-observability)
 - [Testing](#-testing)
-- [Deployment](#-deployment)
 - [Troubleshooting](#-troubleshooting)
-- [Project Structure](#-project-structure)
 
 ## ✨ Features
 
-### Backend Features
-- ✅ **Distributed Job Queue**: Redis-backed job processing system
-- ✅ **Real-time WebSocket Updates**: Live job status updates via Socket.IO
-- ✅ **Cross-Process Communication**: Redis Pub/Sub for multi-process synchronization
-- ✅ **Automatic Retry Logic**: Up to 3 retry attempts with exponential backoff
-- ✅ **Dead Letter Queue (DLQ)**: Automatic handling of permanently failed jobs
-- ✅ **Two-Layer Rate Limiting**: Time-based (10/min) + Concurrent (5 active jobs)
-- ✅ **JWT Authentication**: Secure API access with Bearer tokens
-- ✅ **MongoDB Storage**: Persistent job and user data
-- ✅ **Concurrent Processing**: Configurable worker pool (default: 5 workers)
-- ✅ **Comprehensive Observability**: Structured logging with trace IDs and real-time metrics
+### Core Features
+- ✅ **Distributed Job Queue**: Redis-backed processing with configurable workers (default: 5)
+- ✅ **Real-time Updates**: WebSocket (Socket.IO) + Redis Pub/Sub for live status changes
+- ✅ **Automatic Retries**: Up to 3 attempts with exponential backoff before moving to DLQ
+- ✅ **Two-Layer Rate Limiting**: 
+  - Time-based: 10 requests/minute per user
+  - Concurrent: 5 active jobs per user max
+- ✅ **JWT Authentication**: Secure API with Bearer token authentication
+- ✅ **MongoDB Storage**: Persistent job and user data with optimized indexes
 
-### Frontend Dashboard Features
-- ✅ **Real-time Job Monitoring**: Live WebSocket updates for all job status changes
-- ✅ **Interactive Dashboard**: Drill-down from summary cards to detailed views
-- ✅ **DLQ Viewer**: Dedicated interface for failed job management
-- ✅ **Job Creation**: Create jobs directly from the UI
-- ✅ **Responsive Design**: Optimized for desktop, tablet, and mobile
-- ✅ **Status Filtering**: Quick filters for job categories
-- ✅ **Sortable Tables**: Multi-column sorting capabilities
-- ✅ **Connection Status**: Visual indicator for WebSocket connection
+### Observability & Monitoring
+- ✅ **Structured JSON Logging**: Every event logged with trace IDs for request tracking
+- ✅ **Real-time Metrics**: Redis-backed metrics with 24-hour retention
+- ✅ **Prometheus Integration**: Native Prometheus format for advanced monitoring
+- ✅ **Grafana Ready**: Pre-configured for visualization dashboards
+- ✅ **Health Checks**: Built-in health endpoints for all services
+
+### Dashboard (React)
+- ✅ **Live Monitoring**: Real-time job updates via WebSocket
+- ✅ **Job Management**: Create, view, and filter jobs by status
+- ✅ **DLQ Viewer**: Dedicated interface for failed job analysis
+- ✅ **Responsive Design**: Works on desktop, tablet, and mobile
 
 ## 🚀 Quick Start
 
-### Option 1: Docker (Recommended) 🐳
-
-Run the entire stack with one command!
+### Using Docker (Recommended) 🐳
 
 ```bash
-# Clone the repository
+# Clone and navigate
 git clone https://github.com/swstk125/queuecraft.git
 cd queuecraft
 
@@ -66,474 +61,160 @@ curl -X POST http://localhost:2000/user/create \
   -d "{\"username\":\"admin\",\"email\":\"admin@example.com\",\"password\":\"admin123\"}"
 '
 
-# Access the dashboard at http://localhost:3000
-# API available at http://localhost:2000
+# Access the services:
+# - Dashboard: http://localhost:3000
+# - API: http://localhost:2000
+# - Prometheus: http://localhost:9090 (if using docker-compose.prometheus.yml)
+# - Grafana: http://localhost:3001 (admin/admin)
 ```
 
-**Useful Docker commands:**
+**Common Commands:**
 ```bash
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
-
-# Rebuild after code changes
-docker-compose up -d --build
-
-# View running containers
-docker-compose ps
+docker-compose logs -f              # View logs
+docker-compose logs -f api worker   # View specific service logs
+docker-compose down                 # Stop all services
+docker-compose up -d --build        # Rebuild and restart
 ```
 
-### Option 2: Local Development
-
-**Prerequisites:**
-- Node.js v18+
-- MongoDB (local or Docker)
-- Redis (local or Docker)
-
-#### 1. Install Dependencies
+### Using Docker with Prometheus & Grafana
 
 ```bash
-# Backend dependencies
+# Start with monitoring stack
+docker-compose -f docker-compose.prometheus.yml up -d
+
+# Access monitoring:
+# - Prometheus: http://localhost:9090
+# - Grafana: http://localhost:3001 (login: admin/admin)
+```
+
+### Local Development
+
+**Prerequisites:** Node.js 18+, MongoDB, Redis
+
+```bash
+# Install dependencies
 npm install
-
-# Frontend dependencies
 cd frontend && npm install && cd ..
-```
 
-#### 2. Start MongoDB and Redis
-
-**Option A: Using Docker Compose (Infrastructure only)**
-```bash
+# Start infrastructure (if using Docker)
 docker-compose up -d mongodb redis
-```
 
-**Option B: Using Docker manually**
-```bash
-# MongoDB
-docker run -d -p 27017:27017 --name queuecraft-mongo mongo:latest
-
-# Redis
-docker run -d -p 6379:6379 --name queuecraft-redis redis:latest
-```
-
-**Option C: Local installation**
-```bash
-# Start MongoDB
-mongod
-
-# Start Redis (in another terminal)
-redis-server
-```
-
-#### 3. Start Backend Services
-
-**Terminal 1: API Server (with WebSocket)**
-```bash
+# Terminal 1: API Server
 node appServer.js
-```
 
-Expected output:
-```
-connected to mongodb : mongodb://localhost/queuecraft
-connected to redis : redis://localhost:6379
-✅ Redis publisher initialized for job events.
-Listening on port 2000
-✅ Redis subscriber initialized for channel "job_status_updates".
-✅ Server started with WebSocket support
-```
-
-**Terminal 2: Job Processor**
-```bash
+# Terminal 2: Job Processor
 node jobServer.js
-```
 
-Expected output:
-```
-connected to mongodb : mongodb://localhost/queuecraft
-connected to redis : redis://localhost:6379
-✅ Redis publisher initialized for job events.
-Job processor initialized
-```
+# Terminal 3: Frontend
+cd frontend && npm run dev
 
-#### 4. Create a User
-
-```bash
+# Create user
 curl -X POST http://localhost:2000/user/create \
   -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin",
-    "email": "admin@example.com",
-    "password": "admin123"
-  }'
+  -d '{"username":"admin","email":"admin@example.com","password":"admin123"}'
+
+# Access dashboard at http://localhost:3000
 ```
-
-#### 5. Start Frontend Dashboard
-
-**Terminal 3: Frontend Dev Server**
-```bash
-cd frontend
-npm run dev
-```
-
-Expected output:
-```
-VITE v5.0.8  ready in 500 ms
-➜  Local:   http://localhost:3000/
-```
-
-#### 6. Access the Dashboard
-
-1. Open `http://localhost:3000` in your browser
-2. Login with:
-   - Email: `admin@example.com`
-   - Password: `admin123`
-3. You should see a **green "Connected"** indicator in the top right!
-
-#### 7. Test Real-time Updates
-
-1. Click **"Create Job"** button in the dashboard
-2. Enter a job name and click **"Create"**
-3. Watch the job automatically update from **Pending → Running → Completed**
-4. No page refresh needed! ✨
 
 ## 🏗️ Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                  Dashboard UI (React + WebSocket)                 │
-│                      http://localhost:3000                        │
-│   - Job Overview  - Real-time Updates  - DLQ Viewer  - Auth     │
-└───────────────────────────┬──────────────────────────────────────┘
-                            │ REST API + WebSocket
-                            ↓
-┌──────────────────────────────────────────────────────────────────┐
-│            API Server (Express + Socket.IO)                       │
-│                   http://localhost:2000                           │
-│  - Rate Limiting  - JWT Auth  - Job CRUD  - WebSocket Events    │
-└──────────┬────────────────────────────────┬──────────────────────┘
-           │                                │
-           ↓                                ↓
-   ┌──────────────┐                ┌──────────────────┐
-   │   MongoDB    │                │      Redis       │
-   │ Job Storage  │                │ Queue + Pub/Sub  │
-   └──────────────┘                └──────────────────┘
-           ↑                                ↑
-           │                                │
-           └────────────┬───────────────────┘
-                        │
-                ┌───────┴──────────┐
-                │  Job Processor   │
-                │   Worker Pool    │
-                │  (Concurrency:5) │
-                └──────────────────┘
+┌─────────────────────────────────────────────────┐
+│   React Dashboard (localhost:3000)              │
+│   WebSocket + REST API Client                   │
+└────────────────┬────────────────────────────────┘
+                 │ HTTP + WebSocket
+                 ↓
+┌─────────────────────────────────────────────────┐
+│   API Server (localhost:2000)                   │
+│   Express + Socket.IO + JWT Auth                │
+└─────┬───────────────────────────────┬───────────┘
+      │                               │
+      ↓                               ↓
+┌──────────────┐            ┌─────────────────────┐
+│   MongoDB    │            │      Redis          │
+│  (Port 27017)│            │   (Port 6379)       │
+│  Jobs + Users│            │  Queue + Pub/Sub    │
+└──────┬───────┘            └──────┬──────────────┘
+       │                           │
+       └──────────┬────────────────┘
+                  │
+          ┌───────┴──────────┐
+          │  Job Processor   │
+          │  5 Workers       │
+          └──────────────────┘
 ```
 
-### Real-time Event Flow
+**Event Flow:**
+1. Job Processor updates job status → MongoDB
+2. Job Processor publishes event → Redis Pub/Sub
+3. WebSocket Server receives event → Redis subscription
+4. WebSocket Server emits → Connected dashboard clients
+5. Dashboard UI updates automatically
 
-```
-Job Processor                Redis Pub/Sub              WebSocket Server              Dashboard
-     │                             │                           │                          │
-     │ (1) Job status changes      │                           │                          │
-     ├─────────────────────────────>                           │                          │
-     │     PUBLISH event            │                           │                          │
-     │                             │                           │                          │
-     │                             │ (2) Forward to subscriber │                          │
-     │                             ├───────────────────────────>                          │
-     │                             │                           │                          │
-     │                             │                           │ (3) Emit to client       │
-     │                             │                           ├─────────────────────────>│
-     │                             │                           │                          │
-     │                             │                           │                          │ (4) UI updates
-     │                             │                           │                          │     automatically
-```
-
-## 🔄 Real-time Updates (WebSocket)
-
-### How It Works
-
-QueueCraft uses **Socket.IO** with **Redis Pub/Sub** to deliver real-time job status updates across multiple processes:
-
-1. **Job Processor** updates job status in MongoDB
-2. **Job Processor** publishes event to Redis channel
-3. **WebSocket Server** (in API server) subscribes to Redis channel
-4. **WebSocket Server** emits event to connected dashboard clients
-5. **Dashboard** updates UI automatically (no page refresh!)
-
-### Supported Events
-
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `job:created` | New job created | Complete job object |
-| `job:status:updated` | Job status changed | Job object + oldStatus |
-| `job:completed` | Job finished successfully | Complete job object |
-| `job:movedToDLQ` | Job moved to DLQ after retries | Complete job object |
-
-### Testing Real-time Updates
-
-**Method 1: Via Dashboard**
-1. Login to dashboard
-2. Check connection indicator (should be green "Connected")
-3. Click "Create Job"
-4. Watch status change automatically!
-
-**Method 2: Via API**
-```bash
-# Get token
-TOKEN=$(curl -s -X POST http://localhost:2000/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}' \
-  | jq -r '.jwt')
-
-# Create a job
-curl -X POST http://localhost:2000/job/create \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"API Test Job"}'
-
-# Watch the dashboard update automatically!
-```
-
-**Method 3: Multiple Jobs**
-```bash
-# Create 5 jobs rapidly
-for i in {1..5}; do
-  curl -X POST http://localhost:2000/job/create \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{\"name\":\"Batch Job $i\"}"
-done
-
-# Watch them all process with live updates!
-```
-
-### WebSocket Connection Status
-
-The dashboard displays connection status in the top right:
-- 🟢 **Green "Connected"**: WebSocket connected and authenticated
-- 🔴 **Red "Disconnected"**: WebSocket not connected (check backend)
-
-### Troubleshooting Real-time Updates
-
-**Not seeing updates?**
-
-1. **Check Backend Logs**:
-   ```bash
-   # Terminal 1 (appServer.js) should show:
-   ✅ User connected: admin@example.com (socket-id) [Total: 1]
-   
-   # Terminal 2 (jobServer.js) should show:
-   📤 Published to Redis channel "job_status_updates": job:status:updated
-   ```
-
-2. **Check Browser Console**:
-   ```javascript
-   ✅ WebSocket connected
-   ✅ WebSocket authenticated
-   📥 Job status updated via WebSocket: {...}
-   ```
-
-3. **Verify Redis is Running**:
-   ```bash
-   redis-cli ping  # Should return "PONG"
-   ```
-
-4. **Check Socket.IO in Network Tab**:
-   - Open browser DevTools → Network tab
-   - Filter by "WS" or "WebSocket"
-   - Should see `socket.io` connection
-   - Click to see messages
-
-## 🎨 Dashboard UI
-
-### Main Dashboard
-- **Summary Cards**: Quick overview of job counts (Pending, Running, Completed, Failed)
-- **Job Table**: Sortable, filterable table of all jobs
-- **Status Filters**: Quick toggle between job states
-- **Create Job**: Modal for creating new jobs
-- **Live Updates**: Automatic UI updates via WebSocket
-
-### DLQ Viewer
-- **Failed Jobs List**: All jobs that exceeded retry limits
-- **Job Details Modal**: Comprehensive view of failed job metadata
-- **Visual Indicators**: Clear warnings for jobs requiring attention
-
-### Job Details Page
-- **Complete Metadata**: All job information in organized sections
-- **Status Indicators**: Color-coded badges for current state
-- **Timestamps**: Created and modified times
-
-### Tech Stack
-- **React 18**: Modern React with hooks
-- **Vite 5**: Fast build tool and dev server
-- **React Router 6**: Client-side routing
-- **Socket.IO Client**: WebSocket integration
-- **Axios**: HTTP client with interceptors
-- **Tailwind CSS**: Utility-first styling
-- **Lucide React**: Beautiful icons
+**WebSocket Events:**
+- `job:created` - New job submitted
+- `job:status:updated` - Status changed (pending → running → completed)
+- `job:completed` - Job finished successfully
+- `job:movedToDLQ` - Job failed after 3 retries
 
 ## 📚 API Documentation
 
-### Base URL
-```
-http://localhost:2000
-```
+**Base URL:** `http://localhost:2000`
 
-### Authentication
-
-All protected endpoints require JWT token:
+**Authentication:** All protected endpoints require JWT token
 ```
 Authorization: Bearer <your-jwt-token>
 ```
 
 ### Endpoints
 
-#### 1. Create User
-```bash
-POST /user/create
-Content-Type: application/json
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/user/create` | No | Create new user |
+| POST | `/login` | No | Login and get JWT token |
+| POST | `/job/create` | Yes | Create new job (rate limited) |
+| GET | `/job` | Yes | Get all jobs (supports `?status=pending` filter) |
+| GET | `/job/stats` | Yes | Get job statistics |
+| GET | `/metrics` | Yes | Get real-time system metrics |
+| GET | `/prometheus/metrics` | No | Prometheus format metrics |
+| GET | `/prometheus/health` | No | Prometheus health check |
+| GET | `/sync` | No | Health check (returns timestamp) |
 
-{
-  "username": "admin",
-  "email": "admin@example.com",
-  "password": "admin123"
-}
-
-# Response
-{
-  "_id": "...",
-  "username": "admin",
-  "email": "admin@example.com",
-  "con": "2024-03-20T10:30:00.000Z",
-  "mon": "2024-03-20T10:30:00.000Z"
-}
-```
-
-#### 2. Login
-```bash
-POST /login
-Content-Type: application/json
-
-{
-  "email": "admin@example.com",
-  "password": "admin123"
-}
-
-# Response
-{
-  "success": true,
-  "jwt": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
-
-#### 3. Create Job (Protected)
-```bash
-POST /job/create
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "name": "My Job"
-}
-
-# Success Response (201)
-{
-  "success": true,
-  "job": {
-    "_id": "...",
-    "name": "My Job",
-    "ownerId": "...",
-    "status": "pending",
-    "retryCount": 0,
-    "con": "2024-03-20T10:35:00.000Z"
-  }
-}
-
-# Rate Limit Response (429)
-{
-  "success": false,
-  "error": "Rate limit exceeded. Maximum 5 active jobs allowed."
-}
-```
-
-#### 4. Get Jobs (Protected)
-```bash
-GET /job?status=pending
-Authorization: Bearer <token>
-
-# Response
-{
-  "success": true,
-  "jobs": [...]
-}
-```
-
-#### 5. Get Job Statistics (Protected)
-```bash
-GET /job/stats
-Authorization: Bearer <token>
-
-# Response
-{
-  "success": true,
-  "stats": {
-    "pending": 2,
-    "running": 1,
-    "completed": 15,
-    "failed": 1,
-    "total": 19
-  }
-}
-```
-
-#### 6. Health Check
-```bash
-GET /sync
-
-# Response
-1732456789000
-```
-
-### Complete Workflow Example
+### Example Workflow
 
 ```bash
-#!/bin/bash
-
 BASE_URL="http://localhost:2000"
 
 # 1. Create user
 curl -X POST $BASE_URL/user/create \
   -H "Content-Type: application/json" \
-  -d '{"username":"demo","email":"demo@example.com","password":"demo123"}'
+  -d '{"username":"admin","email":"admin@example.com","password":"admin123"}'
 
-# 2. Login
+# 2. Login and get token
 TOKEN=$(curl -s -X POST $BASE_URL/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"demo@example.com","password":"demo123"}' | jq -r '.jwt')
+  -d '{"email":"admin@example.com","password":"admin123"}' | jq -r '.jwt')
 
-# 3. Create jobs
-for i in {1..3}; do
-  curl -X POST $BASE_URL/job/create \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{\"name\":\"Job $i\"}"
-done
+# 3. Create a job
+curl -X POST $BASE_URL/job/create \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My Test Job"}'
 
 # 4. Get all jobs
-curl -X GET $BASE_URL/job \
-  -H "Authorization: Bearer $TOKEN" | jq '.'
+curl -H "Authorization: Bearer $TOKEN" $BASE_URL/job | jq .
+
+# 5. Get statistics
+curl -H "Authorization: Bearer $TOKEN" $BASE_URL/job/stats | jq .
+
+# 6. Get metrics
+curl -H "Authorization: Bearer $TOKEN" $BASE_URL/metrics | jq .
 ```
 
-## 🔐 Rate Limiting
+### Rate Limit Responses
 
-### Two-Layer Protection
-
-#### 1. Time-Based Rate Limiting (Middleware)
-- **Limit**: 10 job creation attempts per minute per user
-- **Implementation**: In-memory sliding window
-- **Response**: HTTP 429 with retry-after time
-
+**Time-based limit exceeded (10/min):**
 ```json
 {
   "success": false,
@@ -543,11 +224,7 @@ curl -X GET $BASE_URL/job \
 }
 ```
 
-#### 2. Concurrent Job Limiting (Service Layer)
-- **Limit**: Maximum 5 jobs with status `pending` or `running`
-- **Enforcement**: Database query before job creation
-- **Response**: HTTP 429 when limit exceeded
-
+**Concurrent limit exceeded (5 active jobs):**
 ```json
 {
   "success": false,
@@ -555,34 +232,45 @@ curl -X GET $BASE_URL/job \
 }
 ```
 
+## 🔐 Rate Limiting
+
+QueueCraft implements **two-layer rate limiting** for robust protection:
+
+### 1. Time-Based Limiting (Middleware)
+- **Limit:** 10 job creation attempts per minute per user
+- **Implementation:** In-memory sliding window
+- **Response:** HTTP 429 with retry-after seconds
+
+### 2. Concurrent Job Limiting (Service Layer)
+- **Limit:** Maximum 5 active jobs (pending + running) per user
+- **Implementation:** Database query before job creation
+- **Response:** HTTP 429 when exceeded
+
 ### Configuration
 
-**Time-based limit** (edit `api/middleware/rateLimitMiddleware.js`):
+Edit `api/middleware/rateLimitMiddleware.js`:
 ```javascript
 const MAX_REQUESTS_PER_WINDOW = 10;
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 ```
 
-**Concurrent limit** (edit `api/service/JobService.js`):
+Edit `api/service/JobService.js`:
 ```javascript
 const MAX_ACTIVE_JOBS_PER_USER = 5;
 ```
 
-### Key Features
-- ✅ User isolation (independent limits)
-- ✅ Only pending/running jobs count
-- ✅ Completed/DLQ jobs don't count
-- ✅ Clear error messages
-- ✅ Fast with compound indexes
+**Features:**
+- User isolation (limits per user, not global)
+- Only pending/running jobs count (completed/failed don't)
+- Optimized with MongoDB compound indexes
 
-## 📊 Observability
+## 📊 Observability & Monitoring
 
-QueueCraft includes comprehensive observability features for monitoring, debugging, and analyzing your job queue system in production.
+QueueCraft provides comprehensive observability for production monitoring and debugging.
 
-### Features
+### 1. Structured JSON Logging
 
-#### 1. Structured Logging with Trace IDs
-All logs are formatted as JSON with consistent fields for easy parsing and searching:
+Every event is logged in JSON format with trace IDs:
 
 ```json
 {
@@ -597,564 +285,322 @@ All logs are formatted as JSON with consistent fields for easy parsing and searc
 }
 ```
 
-**Every API request gets a unique trace ID** that appears in all related logs, making it easy to track requests across services.
+**Logged Events:** submit, start, finish, fail, retry, dlq
 
-#### 2. Job Event Logging
-All major job lifecycle events are automatically logged:
-- **submit**: Job created
-- **start**: Job processing started
-- **finish**: Job completed successfully
-- **fail**: Job failed
-- **retry**: Job scheduled for retry
-- **dlq**: Job moved to Dead Letter Queue
-
-#### 3. Real-time Metrics API
-Monitor system health with the `/metrics` endpoint:
-
+**Usage:**
 ```bash
-curl -H "Authorization: Bearer <token>" http://localhost:2000/metrics
+# Search by job ID
+grep "jobId.*abc123" logs.json | jq .
+
+# Search by trace ID (tracks entire request lifecycle)
+grep "traceId.*550e8400" logs.json | jq .
+
+# Pass custom trace ID
+curl -H "X-Trace-Id: my-custom-trace" -H "Authorization: Bearer $TOKEN" \
+  http://localhost:2000/job/create
 ```
+
+### 2. Real-time Metrics API
+
+**Endpoint:** `GET /metrics` (requires authentication)
 
 **Available Metrics:**
-- `jobs:total` - Total jobs submitted
-- `jobs:pending` - Current pending jobs
-- `jobs:running` - Current running jobs
-- `jobs:completed` - Total completed jobs
-- `jobs:failed` - Total failed jobs
-- `jobs:retries` - Total retry attempts
-- `jobs:dlq` - Jobs in Dead Letter Queue
-- `jobs:success_rate` - Success rate percentage
-- `jobs:failure_rate` - Failure rate percentage
-- `rate_limit:hits` - Rate limit violations
+- `jobs:total`, `jobs:pending`, `jobs:running`, `jobs:completed`, `jobs:failed`
+- `jobs:retries`, `jobs:dlq`
+- `jobs:success_rate`, `jobs:failure_rate`
+- `rate_limit:hits`
 
-#### 4. Request/Response Logging
-Every API request and response is automatically logged with:
-- Request method and path
-- User ID (if authenticated)
-- Trace ID
-- Response status code
-- Request duration
-
-### Usage Examples
-
-**Search logs by job ID:**
-```bash
-grep "jobId.*abc123" logs.json | jq .
-```
-
-**Search logs by trace ID:**
-```bash
-grep "traceId.*550e8400" logs.json | jq .
-```
-
-**Monitor metrics:**
+**Usage:**
 ```bash
 # Get current metrics
 curl -H "Authorization: Bearer $TOKEN" http://localhost:2000/metrics | jq .
 
-# Watch metrics in real-time
+# Watch in real-time
 watch -n 5 'curl -s -H "Authorization: Bearer $TOKEN" http://localhost:2000/metrics | jq .metrics'
 ```
 
-**Pass custom trace ID:**
+### 3. Prometheus Integration
+
+**Endpoint:** `GET /prometheus/metrics` (no authentication required)
+
+**Quick Start:**
 ```bash
-curl -H "X-Trace-Id: my-custom-trace-123" \
-     -H "Authorization: Bearer $TOKEN" \
-     http://localhost:2000/job/create
-```
-
-### Integration with Monitoring Tools
-
-The structured logging and metrics are designed to work seamlessly with:
-- **ELK Stack** (Elasticsearch, Logstash, Kibana)
-- **Datadog** / **New Relic**
-- **Prometheus** / **Grafana**
-- **Splunk**
-
-📖 **For detailed observability documentation, see [OBSERVABILITY.md](./OBSERVABILITY.md)**
-
-### Prometheus Integration
-
-QueueCraft includes **native Prometheus support** for advanced monitoring:
-
-**Public metrics endpoint (no auth required):**
-```bash
-curl http://localhost:2000/prometheus/metrics
-```
-
-**Quick start with Docker:**
-```bash
-# Start QueueCraft + Prometheus + Grafana
+# Start with Prometheus + Grafana
 docker-compose -f docker-compose.prometheus.yml up -d
 
-# Access services:
-# - Prometheus UI: http://localhost:9090
+# Access monitoring:
+# - Prometheus: http://localhost:9090
 # - Grafana: http://localhost:3001 (admin/admin)
 ```
 
-**Available Prometheus metrics:**
+**Prometheus Metrics:**
 - `queuecraft_jobs_total` - Total jobs submitted
 - `queuecraft_jobs_pending` - Current pending jobs
-- `queuecraft_jobs_running` - Current running jobs
-- `queuecraft_jobs_completed_total` - Completed jobs
+- `queuecraft_jobs_running` - Currently processing
+- `queuecraft_jobs_completed_total` - Successfully completed
 - `queuecraft_jobs_failed_total` - Failed jobs
-- `queuecraft_jobs_success_rate` - Success rate percentage
-- `queuecraft_jobs_dlq` - Jobs in Dead Letter Queue
+- `queuecraft_jobs_success_rate` - Success percentage
+- `queuecraft_jobs_dlq` - Dead letter queue count
 - `queuecraft_rate_limit_hits_total` - Rate limit violations
 
-📊 **For Prometheus setup guide, see [PROMETHEUS_SETUP.md](./PROMETHEUS_SETUP.md)**
+**Grafana Configuration:**
+1. Open Grafana at `http://localhost:3001`
+2. Login with `admin/admin`
+3. Add Prometheus data source: `http://prometheus:9090`
+4. Create dashboards or import existing ones
+
+### 4. Integration Support
+
+Compatible with:
+- **ELK Stack** (Elasticsearch, Logstash, Kibana)
+- **Datadog**, **New Relic**
+- **Prometheus** + **Grafana**
+- **Splunk**
+
+📖 **Detailed Documentation:**
+- [OBSERVABILITY.md](./OBSERVABILITY.md) - Complete observability guide
+- [PROMETHEUS_SETUP.md](./PROMETHEUS_SETUP.md) - Prometheus setup instructions
 
 ## 🧪 Testing
 
-### Run Tests
 ```bash
+# Run all tests
 npm test
-```
 
-### Test Coverage
-```bash
+# Run with coverage
 npm test -- --coverage
 ```
 
-### Test Results
-```
-Test Suites: 3 passed, 3 total
-Tests:       23 passed, 23 total
-Coverage:    High coverage across critical paths
-```
+**Test Results:**
+- Test Suites: 3 passed, 3 total
+- Tests: 23 passed, 23 total
+- Coverage: High across critical paths
 
-### Test Coverage Includes
-- ✅ Time-based rate limiting (10/minute)
-- ✅ Concurrent job limiting (5 max active)
-- ✅ User isolation (independent limits)
-- ✅ Job status filtering
-- ✅ Rate limit recovery after job completion
-- ✅ Error handling and edge cases
+**Coverage Includes:**
+- Rate limiting (time-based + concurrent)
+- Job service operations
+- User isolation
+- Error handling and edge cases
 
 ## 🚀 Deployment
 
-### Option 1: Docker Deployment (Recommended) 🐳
+### Docker (Recommended)
 
-#### Production with Docker Compose
-
-**1. Create `.env` file:**
+**Production:**
 ```bash
-# .env
-SECRET_KEY=your-super-secure-secret-key-change-this
-FRONTEND_URL=https://your-frontend-domain.com
-```
+# 1. Create .env file
+echo "SECRET_KEY=your-secure-secret-key" > .env
+echo "FRONTEND_URL=https://your-domain.com" >> .env
 
-**2. Deploy the stack:**
-```bash
-# Build and start all services
+# 2. Start all services
 docker-compose up -d --build
 
-# View logs
-docker-compose logs -f
-
-# Check service status
-docker-compose ps
-```
-
-**3. Create initial user:**
-```bash
+# 3. Create admin user
 docker exec -it queuecraft-api sh -c '
 curl -X POST http://localhost:2000/user/create \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"admin\",\"email\":\"admin@example.com\",\"password\":\"admin123\"}"
 '
+
+# 4. Scale workers if needed
+docker-compose up -d --scale worker=3
 ```
 
-#### Development with Docker
-
-For local development with hot-reload:
-
+**Development:**
 ```bash
-# Use development docker-compose
+# Hot-reload for all services
 docker-compose -f docker-compose.dev.yml up
-
-# All code changes will auto-reload!
 ```
 
-#### Docker Services Overview
-
+**Docker Services:**
 | Service | Port | Description |
 |---------|------|-------------|
 | MongoDB | 27017 | Database |
 | Redis | 6379 | Queue + Pub/Sub |
 | API | 2000 | Express + WebSocket |
-| Worker | - | Job Processor |
+| Worker | - | Job Processor (scalable) |
 | Frontend | 3000 | React Dashboard |
+| Prometheus | 9090 | Metrics (optional) |
+| Grafana | 3001 | Dashboards (optional) |
 
-#### Useful Docker Commands
+### Traditional Deployment (PM2)
 
+**Environment Variables:**
 ```bash
-# View logs for specific service
-docker-compose logs -f api
-docker-compose logs -f worker
-
-# Restart a service
-docker-compose restart api
-
-# Scale workers
-docker-compose up -d --scale worker=3
-
-# Stop and remove all containers
-docker-compose down
-
-# Stop and remove with volumes (clears data)
-docker-compose down -v
-
-# Execute command in container
-docker exec -it queuecraft-api sh
-```
-
-### Option 2: Traditional Deployment
-
-#### Production Environment Variables
-
-**Backend**
-```bash
-# MongoDB connection
+# Backend
 MONGODB_URI=mongodb://your-mongo-url/queuecraft
-
-# Redis connection
 REDIS_URL=redis://your-redis-url:6379
-
-# JWT secret
 SECRET_KEY=your-secure-secret-key
-
-# API server port
 PORT=2000
-
-# Frontend URL for CORS
 FRONTEND_URL=https://your-frontend-domain.com
-```
 
-**Frontend**
-```bash
-# API URL
+# Frontend
 VITE_API_BASE_URL=https://api.yourdomain.com
 ```
 
-#### Deploy Backend with PM2
-
+**Deploy:**
 ```bash
 # Install PM2
 npm install -g pm2
 
-# Start services
+# Start backend services
 pm2 start appServer.js --name queuecraft-api
 pm2 start jobServer.js --name queuecraft-worker
+pm2 save && pm2 startup
 
-# Monitor
-pm2 monit
-
-# View logs
-pm2 logs
-
-# Save configuration
-pm2 save
-pm2 startup
-```
-
-### Deploy Frontend
-
-#### Option A: Netlify / Vercel
-```bash
-cd frontend
-npm run build
-
-# Deploy 'dist' folder via platform CLI or UI
-```
-
-#### Option B: Docker
-```dockerfile
-FROM node:18-alpine as build
-WORKDIR /app
-COPY frontend/package*.json ./
-RUN npm ci
-COPY frontend/ .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-#### Option C: AWS S3 + CloudFront
-```bash
-cd frontend
-npm run build
-aws s3 sync dist/ s3://your-bucket-name --delete
-aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
-```
-
-#### Docker Compose Configuration
-
-The project includes a complete Docker Compose configuration:
-
-**Files:**
-- `docker-compose.yml` - Production deployment
-- `docker-compose.dev.yml` - Development with hot-reload
-- `Dockerfile` - Backend (API + Worker)
-- `frontend/Dockerfile` - Frontend (React + Nginx)
-
-**Features:**
-- ✅ Health checks for all services
-- ✅ Automatic restart policies
-- ✅ Proper networking and dependencies
-- ✅ Volume persistence for MongoDB and Redis
-- ✅ WebSocket support configured
-- ✅ Environment variable management
-
-**Production Deployment:**
-```bash
-# Start all services
-docker-compose up -d
-
-# Scale workers for higher throughput
-docker-compose up -d --scale worker=5
-
-# Monitor
-docker-compose logs -f api worker
-```
-
-**Development Deployment:**
-```bash
-# Hot-reload for all services
-docker-compose -f docker-compose.dev.yml up
-
-# Code changes auto-reload without rebuild!
+# Build and deploy frontend
+cd frontend && npm run build
+# Deploy 'dist' folder to Netlify/Vercel/S3/CloudFront
 ```
 
 ## 🔧 Troubleshooting
 
-### Backend Issues
+### Connection Issues
 
-**MongoDB Connection Error**
+**MongoDB Connection Error:**
 ```bash
-# Check if MongoDB is running
-docker ps | grep mongo
-# or
-sudo systemctl status mongod
-
-# Test connection
-mongosh mongodb://localhost:27017/queuecraft
+docker ps | grep mongo          # Check if running
+mongosh mongodb://localhost:27017/queuecraft  # Test connection
 ```
 
-**Redis Connection Error**
+**Redis Connection Error:**
 ```bash
-# Check if Redis is running
-docker ps | grep redis
-# or
-sudo systemctl status redis
-
-# Test connection
-redis-cli ping  # Should return "PONG"
+docker ps | grep redis          # Check if running
+redis-cli ping                  # Should return "PONG"
 ```
 
-**WebSocket Not Connecting**
+**Docker Networking (if using Docker Compose):**
 ```bash
-# Check appServer logs for:
-✅ Server started with WebSocket support
-
-# Check firewall/CORS settings
-# Ensure FRONTEND_URL is set correctly
+# Inside containers, use service names:
+# - mongodb:27017 (not localhost:27017)
+# - redis:6379 (not localhost:6379)
+# - api:2000 (not localhost:2000)
+# - prometheus:9090 (not localhost:9090)
 ```
 
 ### Frontend Issues
 
-**401 Unauthorized**
-1. Create user first via `/user/create`
+**401 Unauthorized:**
+1. Create user via `/user/create`
 2. Login with correct credentials
-3. Clear localStorage and try again
+3. Clear localStorage if needed
 
-**WebSocket Shows "Disconnected"**
-1. Check backend is running (both appServer.js and jobServer.js)
-2. Check Redis is running
-3. Open browser console for errors
-4. Check Network tab for WebSocket connection
+**WebSocket "Disconnected":**
+1. Verify both `appServer.js` and `jobServer.js` are running
+2. Check Redis is running (`redis-cli ping`)
+3. Check browser console for errors
+4. Verify `FRONTEND_URL` environment variable is set correctly
 
-**CORS Errors**
-- Ensure backend has correct `FRONTEND_URL` set
+**CORS Errors:**
+- Set correct `FRONTEND_URL` in backend environment
 - Check CORS middleware in `api/index.js`
 
-### Performance Issues
+### Prometheus/Grafana Issues
 
-**Jobs Processing Slowly**
-```javascript
-// Increase worker pool (job/index.js)
-const MAX_WORKERS = 10; // Default is 5
-```
+**Empty metrics in Prometheus:**
+- Ensure Prometheus scrape target uses service name: `api:2000` (not `localhost:2000`)
+- Check `/prometheus/metrics` endpoint is accessible
+- Verify API service is running
 
-**High Memory Usage**
+**Grafana can't connect to Prometheus:**
+- Use `http://prometheus:9090` as data source URL (not `localhost:9090`)
+- Ensure both containers are on the same Docker network
+
+### Performance
+
+**Slow job processing:**
+- Increase workers: Edit `MAX_WORKERS` in `job/index.js` (default: 5)
+- Scale worker containers: `docker-compose up -d --scale worker=5`
+
+**High memory usage:**
 - Reduce worker pool size
-- Implement job pagination
-- Add memory limits in PM2
+- Add PM2 memory limits
 
 ## 📁 Project Structure
 
 ```
 queuecraft/
-├── api/                          # API layer
-│   ├── rest/                    # REST endpoints
-│   │   ├── job.rest.js         # Job CRUD endpoints
-│   │   ├── login.rest.js       # Authentication
-│   │   ├── user.rest.js        # User management
-│   │   └── metrics.rest.js     # Metrics API endpoint
-│   ├── service/                 # Business logic
-│   │   ├── JobService.js       # Job operations
-│   │   ├── LoginService.js     # Authentication logic
-│   │   └── UserService.js      # User operations
-│   ├── middleware/              # Custom middleware
-│   │   ├── authmiddleware.js   # JWT verification
-│   │   ├── rateLimitMiddleware.js # Rate limiting
-│   │   └── traceMiddleware.js  # Trace ID injection
-│   └── index.js                # Express app setup
-├── db/                          # Database layer
-│   ├── schema/                 # Mongoose schemas
-│   │   ├── job.js             # Job schema
-│   │   └── user.js            # User schema
-│   ├── model.js               # Model loader
-│   └── index.js               # DB connection
-├── job/                         # Job processing
-│   ├── index.js                # Job processor
-│   └── jobHandler.js           # Job execution logic
-├── websocket/                   # Real-time communication
-│   ├── websocketServer.js      # Socket.IO server + Redis sub
-│   └── jobEventBridge.js       # Redis publisher for events
-├── util/                        # Utilities
-│   ├── jwtUtils.js             # JWT helpers
-│   ├── logger.js               # Structured logging with trace IDs
-│   ├── metricsService.js       # Metrics tracking and reporting
-│   └── cacheUtils.js           # Redis caching utilities
+├── api/
+│   ├── rest/                    # REST endpoints (job, user, login, metrics, prometheus)
+│   ├── service/                 # Business logic (JobService, UserService, LoginService)
+│   ├── middleware/              # Auth, rate limiting, trace ID injection
+│   └── index.js                 # Express app setup
+├── db/
+│   ├── schema/                  # Mongoose schemas (job, user)
+│   ├── model.js                 # Model loader
+│   └── index.js                 # DB connection
+├── job/
+│   ├── index.js                 # Job processor with worker pool
+│   └── jobHandler.js            # Job execution logic
+├── websocket/
+│   ├── websocketServer.js       # Socket.IO server + Redis subscriber
+│   └── jobEventBridge.js        # Redis publisher for events
+├── util/
+│   ├── logger.js                # Structured JSON logging with trace IDs
+│   ├── metricsService.js        # Real-time metrics (Redis-backed)
+│   ├── prometheusExporter.js    # Prometheus format exporter
+│   ├── jwtUtils.js              # JWT helpers
+│   └── cacheUtils.js            # Redis caching
 ├── frontend/                    # React dashboard
 │   ├── src/
-│   │   ├── components/         # Reusable UI components
-│   │   │   ├── StatusBadge.jsx
-│   │   │   ├── SummaryCard.jsx
-│   │   │   ├── JobTable.jsx
-│   │   │   ├── DLQTable.jsx
-│   │   │   ├── Layout.jsx
-│   │   │   └── LoadingSpinner.jsx
-│   │   ├── pages/              # Page components
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── DLQViewer.jsx
-│   │   │   ├── JobDetails.jsx
-│   │   │   └── Login.jsx
-│   │   ├── services/           # API services
-│   │   │   ├── api.js
-│   │   │   ├── jobService.js
-│   │   │   └── authService.js
-│   │   ├── hooks/              # Custom hooks
-│   │   │   ├── useWebSocket.js
-│   │   │   ├── usePolling.js
-│   │   │   └── useJobs.js
-│   │   ├── context/            # React context
-│   │   │   └── AuthContext.jsx
-│   │   ├── utils/              # Utilities
-│   │   │   └── dateUtils.js
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── package.json
-├── test/                        # Unit tests
-│   └── unit/
-│       ├── job.rest.test.js
-│       ├── JobService.test.js
-│       └── rateLimitMiddleware.test.js
-├── docker-compose.yml          # Docker services
-├── appServer.js                # API server entry
-├── jobServer.js                # Job processor entry
-├── package.json                # Backend dependencies
-├── README.md                   # This file
-└── OBSERVABILITY.md            # Observability documentation
+│   │   ├── components/          # StatusBadge, JobTable, DLQTable, etc.
+│   │   ├── pages/               # Dashboard, DLQViewer, JobDetails, Login
+│   │   ├── services/            # API clients
+│   │   ├── hooks/               # useWebSocket, usePolling, useJobs
+│   │   └── context/             # AuthContext
+│   └── vite.config.js
+├── test/unit/                   # Unit tests (23 passing)
+├── config/                      # Configuration files
+├── docker-compose.yml           # Production Docker setup
+├── docker-compose.prometheus.yml # With Prometheus + Grafana
+├── prometheus.yml               # Prometheus configuration
+├── appServer.js                 # API server entry point
+├── jobServer.js                 # Job processor entry point
+└── OBSERVABILITY.md             # Detailed observability docs
 ```
 
-## 📊 Performance Metrics
+## 📊 Performance & Configuration
 
-- **Job Processing**: ~10 seconds per job (configurable)
-- **Concurrent Workers**: 5 (configurable in `job/index.js`)
-- **Rate Limits**: 
-  - 10 job creation attempts per minute per user
-  - 5 concurrent active jobs per user
-- **Retry Strategy**: Up to 3 attempts before DLQ
-- **WebSocket Latency**: < 100ms for status updates
+- **Job Processing Time:** ~10 seconds per job (configurable in `jobHandler.js`)
+- **Worker Pool Size:** 5 concurrent workers (configurable in `job/index.js`)
+- **Rate Limits:**
+  - Time-based: 10 requests/minute per user
+  - Concurrent: 5 active jobs per user
+- **Retry Strategy:** 3 attempts with exponential backoff before DLQ
+- **WebSocket Latency:** < 100ms for real-time updates
+- **Metrics Retention:** 24 hours in Redis
 
-## 🎯 Design Decisions
+## 🎯 Key Design Decisions
 
-### Why Socket.IO?
-- Standard WebSocket library with fallback support
-- Built-in reconnection logic
-- Room-based messaging for user isolation
-- Easy integration with Express
-
-### Why Redis Pub/Sub?
-- Enables multi-process communication
-- Decouples job processor from API server
+**Socket.IO + Redis Pub/Sub:**
+- Enables multi-process real-time communication
 - Scales horizontally with multiple workers
-- Already using Redis for queue
+- Decouples job processor from API server
 
-### Why Two Rate Limits?
-- **Time-based**: Prevents spam/abuse
-- **Concurrent**: Prevents resource overload
-- Both work together for comprehensive protection
+**Two-Layer Rate Limiting:**
+- Time-based: Prevents spam/abuse (10/min)
+- Concurrent: Prevents resource overload (5 active)
+- Works together for comprehensive protection
 
-### Trade-offs
-- In-memory time-based limits (single-server, could use Redis for multi-server)
-- No MongoDB transactions (would require replica set)
-- JWT in localStorage (consider httpOnly cookies for production)
-- Simple password storage (use bcrypt in production)
+**Structured Logging with Trace IDs:**
+- Every request gets unique trace ID
+- Easy to track requests across services
+- JSON format for easy parsing
 
-## 🔮 Future Enhancements
-
-- [ ] Job scheduling (cron-like)
-- [ ] Job dependencies and workflows
-- [ ] Multi-tenancy support
-- [ ] Advanced analytics dashboard
-- [ ] Email notifications for failures
-- [ ] Job priority queues
-- [ ] Batch job operations
-- [ ] Export job data (CSV, JSON)
-- [ ] Dark mode toggle
-- [ ] Password hashing (bcrypt)
-- [ ] MongoDB transactions
-- [ ] Redis distributed rate limiting
-- [ ] Prometheus metrics
-- [ ] Grafana dashboards
-
-## 🤝 Contributing
-
-This is a complete, production-ready implementation. For enhancements:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add/update tests
-5. Submit a pull request
-
-## 📄 License
-
-ISC License - See package.json for details
+**Prometheus Native Support:**
+- Standard metrics format
+- No auth required for scraping
+- Ready for production monitoring
 
 ## 👨‍💻 Author
 
 **Swastik Thapa**
 - GitHub: [@swstk125](https://github.com/swstk125)
-- Repository: [queuecraft](https://github.com/swstk125/queuecraft)
 
-## 🙏 Acknowledgments
+## 📄 License
 
-- Built with Express.js, React, MongoDB, Redis, and Socket.IO
-- UI components powered by Tailwind CSS
-- Icons by Lucide React
+ISC License
 
 ---
 
-**Status**: ✅ Complete | Backend + Frontend | Real-time WebSocket Updates | 23 Tests Passing | Production Ready
-
-For questions or issues, please open an issue on GitHub.
+**Status:** ✅ Production Ready | Real-time WebSocket | 23 Tests Passing | Docker Ready | Prometheus Integrated
