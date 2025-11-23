@@ -1,4 +1,18 @@
 const JobService = require("../api/service/JobService");
+const jobStatusEmitter = require("../websocket/jobStatusEmitter");
+const getModel = require("../db/model");
+
+// Helper to fetch updated job from database
+const getUpdatedJob = async (jobId) => {
+  try {
+    const jobModel = getModel("job");
+    const job = await jobModel.findById(jobId);
+    return job ? job.toObject() : null;
+  } catch (error) {
+    console.error('Error fetching updated job:', error);
+    return null;
+  }
+};
 
 const leaseJobs = async (jobData, jobCounter) => {
   const { _id: jobId, name } = jobData;
@@ -6,6 +20,13 @@ const leaseJobs = async (jobData, jobCounter) => {
 
   try {
     await JobService.updateJob(jobData._id, {status: "running"});
+    
+    // Fetch updated job and emit event
+    const updatedJob = await getUpdatedJob(jobData._id);
+    if (updatedJob) {
+      jobStatusEmitter.emitJobStatusUpdated(updatedJob, 'pending');
+      console.log(`📤 Emitted: Job ${jobId} → running`);
+    }
     
     // Wait for the job to complete (10 seconds)
     await new Promise((resolve) => {
@@ -49,6 +70,14 @@ const ackJobs = async (jobData) => {
   console.log(`Job ${jobId} acknowledged`);
   try {
     await JobService.updateJob(jobData._id, {status: "completed"});
+    
+    // Fetch updated job and emit events
+    const completedJob = await getUpdatedJob(jobData._id);
+    if (completedJob) {
+      jobStatusEmitter.emitJobCompleted(completedJob);
+      jobStatusEmitter.emitJobStatusUpdated(completedJob, 'running');
+      console.log(`📤 Emitted: Job ${jobId} → completed`);
+    }
   } catch (error) {
     console.error('Error acknowledging job:', error);
   }
@@ -68,6 +97,14 @@ const retryFailedJobs = async (jobData, jobCounter) => {
         status: "pending",
         retryCount: retryCount
       });
+      
+      // Fetch updated job and emit event
+      const retryJob = await getUpdatedJob(jobData._id);
+      if (retryJob) {
+        jobStatusEmitter.emitJobStatusUpdated(retryJob, 'running');
+        console.log(`📤 Emitted: Job ${jobId} → pending (retry ${retryCount}/3)`);
+      }
+      
       console.log(`Job ${jobId} marked for retry (attempt ${retryCount}/3)`);
     }
   } catch (error) {
@@ -80,6 +117,14 @@ const dlqJobs = async (jobData) => {
   console.log(`Job ${jobId} DLQed`);
   try {
     await JobService.updateJob(jobData._id, {status: "dlq"});
+    
+    // Fetch updated job and emit events
+    const dlqJob = await getUpdatedJob(jobData._id);
+    if (dlqJob) {
+      jobStatusEmitter.emitJobMovedToDLQ(dlqJob);
+      jobStatusEmitter.emitJobStatusUpdated(dlqJob, 'running');
+      console.log(`📤 Emitted: Job ${jobId} → dlq`);
+    }
   } catch (error) {
     console.error('Error DLQing job:', error);
   }

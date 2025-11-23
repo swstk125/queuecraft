@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Clock,
@@ -8,11 +8,14 @@ import {
   Plus,
   RefreshCw,
   Filter,
+  Wifi,
+  WifiOff,
 } from 'lucide-react'
 import SummaryCard from '../components/SummaryCard'
 import JobTable from '../components/JobTable'
 import StatusBadge from '../components/StatusBadge'
 import { getJobs, getJobStats, createJob } from '../services/jobService'
+import { useWebSocket } from '../hooks/useWebSocket'
 
 const Dashboard = () => {
   const navigate = useNavigate()
@@ -60,6 +63,69 @@ const Dashboard = () => {
       setLoading(false)
     }
   }
+
+  // Recalculate stats from jobs array
+  const recalculateStats = useCallback((jobsArray) => {
+    const newStats = {
+      pending: jobsArray.filter(j => j.status === 'pending').length,
+      running: jobsArray.filter(j => j.status === 'running').length,
+      completed: jobsArray.filter(j => j.status === 'completed').length,
+      failed: jobsArray.filter(j => j.status === 'dlq').length,
+      total: jobsArray.length,
+    }
+    setStats(newStats)
+  }, [])
+
+  // WebSocket event handlers
+  const handleJobCreated = useCallback((job) => {
+    console.log('📥 Job created via WebSocket:', job)
+    setJobs((prevJobs) => {
+      const newJobs = [job, ...prevJobs]
+      recalculateStats(newJobs)
+      return newJobs
+    })
+  }, [recalculateStats])
+
+  const handleJobStatusUpdated = useCallback(({ jobId, newStatus, job }) => {
+    console.log('🔄 Job status updated via WebSocket:', jobId, newStatus)
+    setJobs((prevJobs) => {
+      const newJobs = prevJobs.map((j) =>
+        j._id === jobId ? { ...j, status: newStatus, mon: job?.mon || j.mon } : j
+      )
+      recalculateStats(newJobs)
+      return newJobs
+    })
+  }, [recalculateStats])
+
+  const handleJobCompleted = useCallback((job) => {
+    console.log('✅ Job completed via WebSocket:', job)
+    setJobs((prevJobs) => {
+      const newJobs = prevJobs.map((j) =>
+        j._id === job._id ? { ...j, ...job } : j
+      )
+      recalculateStats(newJobs)
+      return newJobs
+    })
+  }, [recalculateStats])
+
+  const handleJobMovedToDLQ = useCallback((job) => {
+    console.log('❌ Job moved to DLQ via WebSocket:', job)
+    setJobs((prevJobs) => {
+      const newJobs = prevJobs.map((j) =>
+        j._id === job._id ? { ...j, ...job } : j
+      )
+      recalculateStats(newJobs)
+      return newJobs
+    })
+  }, [recalculateStats])
+
+  // Initialize WebSocket
+  const { isConnected, error: wsError } = useWebSocket({
+    onJobCreated: handleJobCreated,
+    onJobStatusUpdated: handleJobStatusUpdated,
+    onJobCompleted: handleJobCompleted,
+    onJobMovedToDLQ: handleJobMovedToDLQ,
+  })
 
   const handleCreateJob = async (e) => {
     e.preventDefault()
@@ -115,9 +181,27 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            {/* WebSocket Status Indicator */}
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                  <Wifi size={12} />
+                  <span>Live</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                  <WifiOff size={12} />
+                  <span>Offline</span>
+                </div>
+              )}
+            </div>
+          </div>
           <p className="text-gray-600 mt-1">
-            Monitor and manage your job queue
+            {isConnected 
+              ? '🟢 Real-time monitoring active' 
+              : 'Monitor and manage your job queue'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -138,6 +222,13 @@ const Dashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* WebSocket Error */}
+      {wsError && !isConnected && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg text-sm">
+          <strong>⚠️ Real-time updates unavailable:</strong> {wsError}. Using manual refresh.
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

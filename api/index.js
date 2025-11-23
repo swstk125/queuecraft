@@ -31,11 +31,19 @@ app.get("/sync", (req, res) => {
 });
 
 // initialize the app
-app.initialize = () => {
+app.initialize = (httpServer) => {
   try {
-    app.listen(port, () => {
-      console.log('Listening on port ' + port);
-    });
+    if (httpServer) {
+      // Used when HTTP server is provided (for WebSocket support)
+      return httpServer.listen(port, () => {
+        console.log('Listening on port ' + port);
+      });
+    } else {
+      // Fallback: create server directly
+      return app.listen(port, () => {
+        console.log('Listening on port ' + port);
+      });
+    }
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);
@@ -52,3 +60,4 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 module.exports = app;
+module.exports.port = port;

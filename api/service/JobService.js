@@ -1,4 +1,5 @@
 const getModel = require("../../db/model");
+const jobStatusEmitter = require("../../websocket/jobStatusEmitter");
 
 // Rate limiting configuration
 const MAX_ACTIVE_JOBS_PER_USER = 5;
@@ -37,6 +38,12 @@ class JobService{
       payload.status = payload.status || "pending";
       
       const job = await this.jobModel.create(payload);
+      
+      // Emit job created event for WebSocket
+      const jobObject = job.toObject ? job.toObject() : job;
+      jobStatusEmitter.emitJobCreated(jobObject, userId);
+      console.log(`📤 Emitted: Job created ${job._id}`);
+      
       return {success: true, job: job};
       
     } catch (error) {
