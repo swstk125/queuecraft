@@ -565,27 +565,134 @@ queuecraft/
 - **WebSocket Latency:** < 100ms for real-time updates
 - **Metrics Retention:** 24 hours in Redis
 
-## 🎯 Key Design Decisions
+## 🎯 Design Trade-offs
 
-**Socket.IO + Redis Pub/Sub:**
-- Enables multi-process real-time communication
-- Scales horizontally with multiple workers
-- Decouples job processor from API server
+### 1. Redis vs RabbitMQ/Kafka for Job Queue
+**Chose Redis:**
+- **Pros:** Simple setup, built-in pub/sub, fast, multi-purpose (queue + cache + metrics)
+- **Cons:** Less feature-rich than dedicated message brokers, no native message replay
+- **Trade-off:** Simplicity and performance over advanced messaging features
 
-**Two-Layer Rate Limiting:**
-- Time-based: Prevents spam/abuse (10/min)
-- Concurrent: Prevents resource overload (5 active)
-- Works together for comprehensive protection
+### 2. MongoDB vs PostgreSQL for Persistence
+**Chose MongoDB:**
+- **Pros:** Flexible schema, fast writes, easy to scale horizontally, JSON-native
+- **Cons:** No built-in joins, eventual consistency options less mature than SQL
+- **Trade-off:** Schema flexibility and horizontal scaling over relational integrity
 
-**Structured Logging with Trace IDs:**
-- Every request gets unique trace ID
-- Easy to track requests across services
-- JSON format for easy parsing
+### 3. Real-time Updates: WebSocket vs Polling
+**Chose WebSocket (Socket.IO) + Redis Pub/Sub:**
+- **Pros:** True real-time updates, low latency (<100ms), efficient (no repeated requests)
+- **Cons:** More complex than polling, requires persistent connections, harder to debug
+- **Trade-off:** Better UX and efficiency over simplicity
 
-**Prometheus Native Support:**
-- Standard metrics format
-- No auth required for scraping
-- Ready for production monitoring
+### 4. Two-Layer Rate Limiting vs Single Layer
+**Chose Two Layers (Time-based + Concurrent):**
+- **Pros:** Comprehensive protection against both spam and resource exhaustion
+- **Cons:** More complex logic, two potential failure points
+- **Trade-off:** Robust protection over simplicity
+
+### 5. Stateless Workers vs Stateful Workers
+**Chose Stateless (Jobs in Redis, not memory):**
+- **Pros:** Easy to scale/restart, no data loss on crashes, simple auto-scaling
+- **Cons:** Slightly higher latency (Redis network calls), requires external state store
+- **Trade-off:** Scalability and resilience over marginal performance gains
+
+### 6. JWT vs Session-based Authentication
+**Chose JWT:**
+- **Pros:** Stateless, no server-side session storage, works across distributed systems
+- **Cons:** Cannot revoke tokens before expiry, larger payload than session IDs
+- **Trade-off:** Scalability over fine-grained session control
+
+### 7. Structured JSON Logging vs Plain Text
+**Chose JSON with Trace IDs:**
+- **Pros:** Machine-parseable, easy integration with log aggregators (ELK, Datadog)
+- **Cons:** Less human-readable in raw form, slightly larger log size
+- **Trade-off:** Tooling integration and searchability over readability
+
+### Summary
+The system prioritizes **scalability, resilience, and real-time capabilities** over absolute simplicity, making it production-ready for variable workloads while maintaining operational sanity.
+
+## 🔄 Auto-Scaling Workers (Design Overview)
+
+### Current State
+The system uses a **fixed worker pool** (default: 5 workers). This is simple, predictable, and suitable for consistent workloads.
+
+### How Auto-Scaling Would Work
+
+**Scaling Triggers:**
+1. **Queue Depth-Based (Recommended):** Monitor pending jobs in Redis queue
+   - Scale up when queue > 20 jobs, scale down when < 5 jobs
+   - Simple to implement and understand
+
+2. **Worker Utilization-Based:** Monitor percentage of busy workers
+   - Scale up when >80% busy, scale down when <20% busy
+   - Better adapts to varying job durations
+
+3. **Job Wait Time-Based:** Monitor how long jobs wait before processing
+   - Scale up when wait time exceeds threshold (e.g., 30 seconds)
+   - Most user-centric, but reactive
+
+
+### Fixed vs Auto-Scaling Comparison
+
+| Aspect | Fixed Pool (Current) | Auto-Scaling |
+|--------|---------------------|--------------|
+| **Complexity** | Simple, easy to debug | Requires monitoring infrastructure |
+| **Cost** | Pays for idle capacity | Only pay for what you use |
+| **Stability** | Very stable | Risk of thrashing if not tuned |
+| **Best For** | Consistent traffic patterns | Variable traffic (>3x variance) |
+
+### Implementation Considerations
+
+**1. Scaling Metrics Comparison:**
+- **Queue Depth:** Simplest to implement, but doesn't account for job complexity
+- **Worker Utilization:** More accurate, but requires worker instrumentation
+- **Job Wait Time:** User-focused, but reactive (problems already occurring)
+- **Composite:** Most robust, but complex to tune
+
+**2. Thrashing Prevention:**
+- Use cooldown periods (1-5 minutes) between scaling decisions
+- Implement stabilization windows to avoid rapid up/down cycles
+- Set min/max worker bounds (e.g., 2-20 workers)
+
+**3. State Management:**
+- Current implementation is **stateless** ✅ (jobs in Redis, not worker memory)
+- Workers can be safely killed/started without data loss
+- This makes QueueCraft ideal for auto-scaling
+
+**4. Scaling Speed:**
+- Container startup time: 5-30 seconds depending on platform
+- Always maintain minimum workers to handle burst traffic
+- Consider pre-warming strategies for predictable peaks
+
+**5. Cost Implications:**
+- Fixed pool: Simple cost prediction (N workers × $X/hour)
+- Auto-scaling: Variable costs, but potential 30-50% savings for variable workloads
+- Factor in orchestration platform costs (K8s cluster, monitoring tools)
+
+### Monitoring Requirements
+
+Key metrics to track if implementing auto-scaling:
+- Scaling events frequency and timing
+- Queue depth at time of scaling
+- Worker count over time
+- Cost per job processed
+- Scaling latency (decision to new worker ready)
+
+### Current Manual Scaling
+
+Until auto-scaling is implemented, scale manually based on traffic patterns:
+- Kubernetes: `kubectl scale deployment queuecraft-worker --replicas=10`
+- Docker Compose: `docker-compose up -d --scale worker=10`
+- Docker Swarm: `docker service scale queuecraft-worker=10`
+
+### Recommendation
+
+Start with **fixed pool** for initial deployment. Consider auto-scaling when:
+1. Traffic varies significantly (>3x) throughout the day/week
+2. Cost optimization becomes a priority
+3. You have monitoring infrastructure in place
+4. Team has operational bandwidth to manage complexity
 
 ## 👨‍💻 Author
 
