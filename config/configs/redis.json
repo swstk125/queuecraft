@@ -3,5 +3,10 @@
         "doc": "Redis connection URL",
         "default": "redis://localhost:6379",
         "env": "REDIS_URL"
+    },
+    "jobEventsChannel": {
+        "doc": "Redis pub/sub channel name for job events",
+        "default": "job:events",
+        "env": "REDIS_JOB_EVENTS_CHANNEL"
     }
 }

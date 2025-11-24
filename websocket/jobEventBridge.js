@@ -4,8 +4,7 @@
  */
 
 const { getRedisClient } = require('../db');
-
-const JOB_EVENTS_CHANNEL = 'job:events';
+const config = require('../config');
 
 /**
  * Publish job event to Redis
@@ -25,7 +24,8 @@ async function publishJobEvent(eventType, data) {
       timestamp: new Date().toISOString()
     });
 
-    await redis.publish(JOB_EVENTS_CHANNEL, message);
+    const channel = config.get('redis.jobEventsChannel');
+    await redis.publish(channel, message);
     console.log(`📤 Published to Redis: ${eventType}`, data._id || data.job?._id);
   } catch (error) {
     console.error('Error publishing job event:', error);
@@ -48,7 +48,8 @@ async function subscribeToJobEvents(callback) {
     const subscriber = redis.duplicate();
     await subscriber.connect();
 
-    await subscriber.subscribe(JOB_EVENTS_CHANNEL, (message) => {
+    const channel = config.get('redis.jobEventsChannel');
+    await subscriber.subscribe(channel, (message) => {
       try {
         const event = JSON.parse(message);
         console.log(`📥 Received from Redis: ${event.type}`, event.data._id || event.data.job?._id);
@@ -68,7 +69,6 @@ async function subscribeToJobEvents(callback) {
 
 module.exports = {
   publishJobEvent,
-  subscribeToJobEvents,
-  JOB_EVENTS_CHANNEL
+  subscribeToJobEvents
 };
 

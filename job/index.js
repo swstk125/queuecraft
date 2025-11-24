@@ -60,14 +60,16 @@ const initializeJobProcessor = async () => {
         }
       } else {
         // Add delay when no jobs are pending to prevent database hammering
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        const pollingDelay = config.get('job.pollingDelay');
+        await new Promise(resolve => setTimeout(resolve, pollingDelay));
       }
     } catch (error) {
       logger.error('Error in job processor loop', error, {
         service: 'jobProcessor'
       });
       // Wait before retrying to prevent rapid error loops
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      const errorRetryDelay = config.get('job.errorRetryDelay');
+      await new Promise(resolve => setTimeout(resolve, errorRetryDelay));
     }
   }
 };
