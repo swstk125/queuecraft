@@ -131,9 +131,10 @@ class JobService{
    * Get jobs for a user (with caching)
    * @param {Object} authInfo - Authentication information
    * @param {Object} query - Query filters
+   * @param {Object} sort - Sort options (e.g., { con: 1 } for ascending by creation date)
    * @returns {Promise<Object>} List of jobs
    */
-  async getJobs(authInfo, query) {
+  async getJobs(authInfo, query, sort = {}) {
     try {
       const filter = {...query};
       // Only filter by ownerId if authInfo and userId are provided
@@ -153,8 +154,8 @@ class JobService{
         }
       }
       
-      // Get from DB
-      const jobs = await this.jobModel.find(filter);
+      // Get from DB with sorting
+      const jobs = await this.jobModel.find(filter).sort(sort);
       const jobsArray = jobs.map(job => job.toObject ? job.toObject() : job);
       
       // Cache if user-specific query
@@ -166,7 +167,8 @@ class JobService{
       logger.debug('Jobs fetched from database', { 
         userId: authInfo?.userId, 
         count: jobsArray.length,
-        filter 
+        filter,
+        sort 
       });
       
       return {success: true, jobs: jobsArray};

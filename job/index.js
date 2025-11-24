@@ -16,7 +16,8 @@ const chunk = (array, size) => {
 };
 
 const getJobs = async () => {
-  const data = await JobService.getJobs({}, {status: "pending"});
+  // Sort by creation date (con) in ascending order to ensure FIFO (First In First Out)
+  const data = await JobService.getJobs({}, {status: "pending"}, {con: 1});
   if (data.success && data.jobs.length > 0) {
     logger.debug('Fetched pending jobs', { 
       count: data.jobs.length,
