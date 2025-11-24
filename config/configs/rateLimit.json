@@ -1,0 +1,21 @@
+{
+    "window": {
+        "doc": "Rate limit window duration in milliseconds",
+        "format": "int",
+        "default": 60000,
+        "env": "RATE_LIMIT_WINDOW"
+    },
+    "maxRequestsPerWindow": {
+        "doc": "Maximum number of job creation requests allowed per window",
+        "format": "int",
+        "default": 10,
+        "env": "RATE_LIMIT_MAX_REQUESTS"
+    },
+    "cleanupInterval": {
+        "doc": "Interval for cleaning up old rate limit entries in milliseconds",
+        "format": "int",
+        "default": 300000,
+        "env": "RATE_LIMIT_CLEANUP_INTERVAL"
+    }
+}
+
