@@ -4,5 +4,29 @@
         "format": "int",
         "default": 5,
         "env": "JOB_CONCURRENCY"
+    },
+    "maxActiveJobsPerUser": {
+        "doc": "Maximum number of active (pending/running) jobs allowed per user",
+        "format": "int",
+        "default": 5,
+        "env": "MAX_ACTIVE_JOBS_PER_USER"
+    },
+    "activeJobStatuses": {
+        "doc": "Job statuses that count towards active job limit",
+        "format": "Array",
+        "default": ["pending", "running"],
+        "env": "ACTIVE_JOB_STATUSES"
+    },
+    "pollingDelay": {
+        "doc": "Delay in milliseconds when no pending jobs are found",
+        "format": "int",
+        "default": 2000,
+        "env": "JOB_POLLING_DELAY"
+    },
+    "errorRetryDelay": {
+        "doc": "Delay in milliseconds before retrying after an error",
+        "format": "int",
+        "default": 5000,
+        "env": "JOB_ERROR_RETRY_DELAY"
     }
 }

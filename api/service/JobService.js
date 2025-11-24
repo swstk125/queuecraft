@@ -3,10 +3,7 @@ const jobStatusEmitter = require("../../websocket/jobStatusEmitter");
 const cache = require("../../util/cacheUtils");
 const logger = require("../../util/logger");
 const metricsService = require("../../util/metricsService");
-
-// Rate limiting configuration
-const MAX_ACTIVE_JOBS_PER_USER = 5;
-const ACTIVE_JOB_STATUSES = ["pending", "running"];
+const config = require("../../config");
 
 class JobService{
   constructor() {
@@ -30,7 +27,7 @@ class JobService{
     // Get from DB and cache it
     const count = await this.jobModel.countDocuments({
       ownerId: userId,
-      status: { $in: ACTIVE_JOB_STATUSES }
+      status: { $in: config.get('job.activeJobStatuses') }
     });
     
     // Cache for 30 seconds (short TTL for accuracy)
@@ -70,8 +67,9 @@ class JobService{
       const activeJobCount = await this.getActiveJobCount(userId);
       
       // Enforce rate limit
-      if (activeJobCount >= MAX_ACTIVE_JOBS_PER_USER) {
-        const error = new Error(`Rate limit exceeded. Maximum ${MAX_ACTIVE_JOBS_PER_USER} active jobs allowed.`);
+      const maxActiveJobs = config.get('job.maxActiveJobsPerUser');
+      if (activeJobCount >= maxActiveJobs) {
+        const error = new Error(`Rate limit exceeded. Maximum ${maxActiveJobs} active jobs allowed.`);
         error.statusCode = 429;
         
         // Record rate limit hit
@@ -80,7 +78,7 @@ class JobService{
         logger.warn('Job creation rate limit exceeded', {
           userId,
           activeJobCount,
-          maxAllowed: MAX_ACTIVE_JOBS_PER_USER,
+          maxAllowed: maxActiveJobs,
           jobName: payload.name
         });
         
@@ -252,7 +250,7 @@ class JobService{
    * @returns {Number} Maximum active jobs limit
    */
   getMaxActiveJobsLimit() {
-    return MAX_ACTIVE_JOBS_PER_USER;
+    return config.get('job.maxActiveJobsPerUser');
   }
 }
 
