@@ -23,146 +23,143 @@ const getUpdatedJob = async (jobId) => {
     
     return null;
   } catch (error) {
-    console.error('Error fetching updated job:', error);
+    logger.error('Error fetching updated job', error, { jobId });
     return null;
   }
 };
 
-const leaseJobs = async (jobData, jobCounter) => {
-  const { _id: jobId, name, ownerId } = jobData;
-  let status = "failed";
+/**
+ * Main job processing function for RabbitMQ integration
+ * Handles the complete job lifecycle: lease -> process -> ack/nack
+ * 
+ * @param {Object} jobData - Job data from RabbitMQ message
+ * @param {number} jobCounter - Global job counter for demo purposes
+ * @throws {Error} If job processing fails (triggers RabbitMQ retry/DLQ)
+ */
+const processJob = async (jobData, jobCounter) => {
+  const jobId = jobData.jobId || jobData._id;
+  const { name, ownerId } = jobData;
   const startTime = Date.now();
 
   try {
-    // Update job status to running
-    await JobService.updateJob(jobData._id, {status: "running"});
+    // LEASE: Update job status to running
+    logger.info('Job leased for processing', { jobId, name });
+    await JobService.updateJob(jobId, { status: "running" });
     
     // Fetch updated job and emit event
-    const updatedJob = await getUpdatedJob(jobData._id);
-    if (updatedJob) {
-      jobStatusEmitter.emitJobStatusUpdated(updatedJob, 'pending');
+    const runningJob = await getUpdatedJob(jobId);
+    if (runningJob) {
+      jobStatusEmitter.emitJobStatusUpdated(runningJob, 'pending');
       
       // Record metrics and log
       await metricsService.recordJobStarted();
-      logger.logJobEvent('start', updatedJob, { jobCounter });
+      logger.logJobEvent('start', runningJob, { jobCounter });
     }
     
-    // Wait for the job to complete (10 seconds)
-    await new Promise((resolve) => {
-      setTimeout(() => {
-        // Deterministic failure logic for assignment demonstration:
-        // 1. Jobs with "fail" in name ALWAYS fail (for DLQ demonstration)
-        // 2. Otherwise, every 3rd job fails (for general retry demonstration)
-        const shouldAlwaysFail = name && name.toLowerCase().includes('fail');
-        
-        if(shouldAlwaysFail) {
-          status = "failed";
-          logger.debug('Job marked to fail', { 
-            jobId, 
-            name, 
-            reason: 'name contains "fail"' 
-          });
-        } else if(jobCounter % 3 == 0) {
-          status = "failed";
-          logger.debug('Job failed', { 
-            jobId, 
-            name, 
-            jobCounter, 
-            reason: 'every 3rd job fails' 
-          });
-        } else {
-          status = "success";
-          logger.debug('Job succeeded', { jobId, name, jobCounter });
-        }
-        resolve();
-      }, 10000);
-    });
-
+    // PROCESS: Simulate job execution (10 seconds)
+    // In production, this would be actual work (API calls, data processing, etc.)
+    const jobResult = await executeJobLogic(name, jobCounter);
+    
     // Record processing time
     const processingTime = Date.now() - startTime;
     await metricsService.recordJobProcessingTime(jobId, processingTime);
-
-    // Process the result after the timeout completes
-    if(status == "failed") {
-      await retryFailedJobs(jobData, jobCounter);
-    } else if(status == "success") {
-      await ackJobs(jobData, processingTime);
-    }
-  } catch (error) {
-    logger.error('Error leasing job', error, { jobId, name, ownerId });
-    status = "failed";
-    await retryFailedJobs(jobData, jobCounter);
-  }
-}
-
-const ackJobs = async (jobData, processingTime) => {
-  const { _id: jobId, name, ownerId } = jobData;
-  try {
-    await JobService.updateJob(jobData._id, {status: "completed"});
     
-    // Fetch updated job and emit events
-    const completedJob = await getUpdatedJob(jobData._id);
-    if (completedJob) {
-      jobStatusEmitter.emitJobCompleted(completedJob);
-      jobStatusEmitter.emitJobStatusUpdated(completedJob, 'running');
+    if (jobResult.success) {
+      // ACK: Job succeeded, mark as completed
+      await JobService.updateJob(jobId, { status: "completed" });
       
-      // Record metrics and log
-      await metricsService.recordJobCompleted();
-      logger.logJobEvent('finish', completedJob, { 
-        processingTime: `${processingTime}ms` 
-      });
-    }
-  } catch (error) {
-    logger.error('Error acknowledging job', error, { jobId, name, ownerId });
-  }
-}
-
-const retryFailedJobs = async (jobData, jobCounter) => {
-  const { _id: jobId, name, ownerId } = jobData;
-  let retryCount = jobData.retryCount || 0;
-  try {
-    retryCount++;
-    if(retryCount > 3) {
-      await dlqJobs(jobData);
-    } else {
-      // Update retryCount AND status in database - DO NOT retry immediately
-      // Let the job processor pick it up in the next cycle
-      await JobService.updateJob(jobData._id, {
-        status: "pending",
-        retryCount: retryCount
-      });
-      
-      // Fetch updated job and emit event
-      const retryJob = await getUpdatedJob(jobData._id);
-      if (retryJob) {
-        jobStatusEmitter.emitJobStatusUpdated(retryJob, 'running');
+      const completedJob = await getUpdatedJob(jobId);
+      if (completedJob) {
+        jobStatusEmitter.emitJobCompleted(completedJob);
+        jobStatusEmitter.emitJobStatusUpdated(completedJob, 'running');
         
         // Record metrics and log
-        await metricsService.recordJobRetry();
-        logger.logJobEvent('retry', retryJob, { 
-          retryCount, 
-          maxRetries: 3,
-          reason: 'Job execution failed'
+        await metricsService.recordJobCompleted();
+        logger.logJobEvent('finish', completedJob, { 
+          processingTime: `${processingTime}ms` 
         });
       }
+      
+      logger.info('Job completed successfully', { jobId, processingTime });
+      
+    } else {
+      // Job failed - throw error to trigger RabbitMQ retry/DLQ logic
+      throw new Error(jobResult.error || 'Job execution failed');
     }
+    
   } catch (error) {
-    logger.error('Error retrying failed job', error, { 
-      jobId, 
-      name, 
-      ownerId, 
-      retryCount 
-    });
+    logger.error('Job processing failed', error, { jobId, name, ownerId });
+    
+    // Update job status to failed (RabbitMQ will handle retry)
+    try {
+      await JobService.updateJob(jobId, { status: "failed" });
+      const failedJob = await getUpdatedJob(jobId);
+      if (failedJob) {
+        jobStatusEmitter.emitJobStatusUpdated(failedJob, 'running');
+      }
+    } catch (updateError) {
+      logger.error('Error updating failed job status', updateError, { jobId });
+    }
+    
+    // Re-throw to let RabbitMQ handle retry/DLQ
+    throw error;
   }
-}
+};
 
-const dlqJobs = async (jobData) => {
-  const { _id: jobId, name, ownerId } = jobData;
+/**
+ * Execute the actual job logic
+ * This is where the real work happens in production
+ * 
+ * @param {string} name - Job name
+ * @param {number} jobCounter - Job counter
+ * @returns {Promise<Object>} Result with success flag and optional error
+ */
+const executeJobLogic = async (name, jobCounter) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Deterministic failure logic for assignment demonstration:
+      // 1. Jobs with "fail" in name ALWAYS fail (for DLQ demonstration)
+      // 2. Otherwise, every 3rd job fails (for general retry demonstration)
+      const shouldAlwaysFail = name && name.toLowerCase().includes('fail');
+      
+      if (shouldAlwaysFail) {
+        logger.debug('Job marked to fail', { 
+          name, 
+          reason: 'name contains "fail"' 
+        });
+        resolve({ success: false, error: 'Job name contains "fail"' });
+      } else if (jobCounter % 3 === 0) {
+        logger.debug('Job failed', { 
+          name, 
+          jobCounter, 
+          reason: 'every 3rd job fails' 
+        });
+        resolve({ success: false, error: 'Simulated failure (every 3rd job)' });
+      } else {
+        logger.debug('Job succeeded', { name, jobCounter });
+        resolve({ success: true });
+      }
+    }, 10000); // 10 second processing time
+  });
+};
+
+/**
+ * Handle DLQ job (called by RabbitMQ when max retries exceeded)
+ * Updates the database status to 'dlq' for monitoring
+ * 
+ * @param {Object} jobData - Job data
+ */
+const handleDLQJob = async (jobData) => {
+  const jobId = jobData.jobId || jobData._id;
+  const { name, ownerId } = jobData;
+  
   try {
-    await JobService.updateJob(jobData._id, {status: "dlq"});
+    logger.warn('Job moved to Dead Letter Queue', { jobId, name });
+    
+    await JobService.updateJob(jobId, { status: "dlq" });
     
     // Fetch updated job and emit events
-    const dlqJob = await getUpdatedJob(jobData._id);
+    const dlqJob = await getUpdatedJob(jobId);
     if (dlqJob) {
       jobStatusEmitter.emitJobMovedToDLQ(dlqJob);
       jobStatusEmitter.emitJobStatusUpdated(dlqJob, 'running');
@@ -175,13 +172,22 @@ const dlqJobs = async (jobData) => {
       });
     }
   } catch (error) {
-    logger.error('Error moving job to DLQ', error, { jobId, name, ownerId });
+    logger.error('Error handling DLQ job', error, { jobId, name, ownerId });
   }
-}
+};
+
+/**
+ * Legacy function kept for backward compatibility
+ * Use processJob instead for RabbitMQ integration
+ */
+const leaseJobs = async (jobData, jobCounter) => {
+  logger.warn('leaseJobs is deprecated, use processJob instead');
+  return processJob(jobData, jobCounter);
+};
 
 module.exports = {
-  leaseJobs,
-  ackJobs,
-  retryFailedJobs,
-  dlqJobs
-}
+  processJob,
+  handleDLQJob,
+  leaseJobs, // Kept for backward compatibility
+  getUpdatedJob
+};

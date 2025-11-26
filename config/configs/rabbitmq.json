@@ -1,0 +1,9 @@
+{
+  "url": "amqp://queuecraft:queuecraft@rabbitmq:5672",
+  "reconnectDelay": 5000,
+  "queueName": "job-queue",
+  "dlqName": "job-dlq",
+  "maxRetries": 3,
+  "retryDelayBase": 5000
+}
+

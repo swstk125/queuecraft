@@ -4,6 +4,7 @@ const cache = require("../../util/cacheUtils");
 const logger = require("../../util/logger");
 const metricsService = require("../../util/metricsService");
 const config = require("../../config");
+const rabbitmq = require("../../job/rabbitmqConnection");
 
 class JobService{
   constructor() {
@@ -100,6 +101,16 @@ class JobService{
       const jobObject = job.toObject ? job.toObject() : job;
       await cache.set(cache.getJobByIdKey(job._id), jobObject, 300);
       
+      // Publish to RabbitMQ for processing
+      await rabbitmq.publishJob({
+        jobId: job._id.toString(),
+        name: jobObject.name,
+        ownerId: jobObject.ownerId,
+        payload: jobObject.payload,
+        status: jobObject.status,
+        con: jobObject.con
+      });
+      
       // Record metrics
       await metricsService.recordJobSubmitted();
       
@@ -109,7 +120,7 @@ class JobService{
       // Emit job created event for WebSocket
       jobStatusEmitter.emitJobCreated(jobObject, userId);
       
-      logger.debug('Job created event emitted', { 
+      logger.debug('Job created and published to RabbitMQ', { 
         jobId: job._id, 
         userId 
       });

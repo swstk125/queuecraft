@@ -55,9 +55,11 @@ services:
       - SERVICE_NAME=queuecraft-api
       - REDIS_URL=redis://redis:6379
       - MONGODB_URI=mongodb://mongodb:27017/queuecraft
+      - RABBITMQ_URL=amqp://queuecraft:queuecraft@rabbitmq:5672
     depends_on:
       - mongodb
       - redis
+      - rabbitmq
     restart: unless-stopped
     networks:
       - queuecraft-network
@@ -74,9 +76,11 @@ services:
       - SERVICE_NAME=queuecraft-worker
       - REDIS_URL=redis://redis:6379
       - MONGODB_URI=mongodb://mongodb:27017/queuecraft
+      - RABBITMQ_URL=amqp://queuecraft:queuecraft@rabbitmq:5672
     depends_on:
       - mongodb
       - redis
+      - rabbitmq
       - api
     restart: unless-stopped
     networks:
@@ -123,9 +127,26 @@ services:
     networks:
       - queuecraft-network
 
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: queuecraft-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=queuecraft
+      - RABBITMQ_DEFAULT_PASS=queuecraft
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - queuecraft-network
+
 volumes:
   mongodb-data:
   redis-data:
+  rabbitmq-data:
   prometheus-data:
   grafana-data:
 

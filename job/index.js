@@ -1,76 +1,81 @@
-const JobService = require("../api/service/JobService");
-const JobHandler = require("./jobHandler.js");
-const config = require("../config");
-const logger = require("../util/logger");
+const rabbitmq = require('./rabbitmqConnection');
+const JobHandler = require('./jobHandler');
+const logger = require('../util/logger');
+const config = require('../config');
 
-// Get concurrency level from config
-const CONCURRENCY = config.get('job.concurrency');
-
-// Utility to split jobs into N-sized batches
-const chunk = (array, size) => {
-  const result = [];
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
-  }
-  return result;
-};
-
-const getJobs = async () => {
-  // Sort by creation date (con) in ascending order to ensure FIFO (First In First Out)
-  const data = await JobService.getJobs({}, {status: "pending"}, {con: 1});
-  if (data.success && data.jobs.length > 0) {
-    logger.debug('Fetched pending jobs', { 
-      count: data.jobs.length,
-      jobIds: data.jobs.map(j => j._id).slice(0, 5) // Log first 5 job IDs
-    });
-  }
-  return data;
-}
-
-
-
+/**
+ * Initialize the RabbitMQ-based job processor
+ * This replaces the old database polling approach with proper message queue consumption
+ */
 const initializeJobProcessor = async () => {
-  logger.info('Job processor initialized', { 
-    concurrency: CONCURRENCY,
-    service: 'jobProcessor'
-  });
-  
-  let globalJobCounter = 0; // Track global job counter
-  
-  while (true) {
-    try {
-      const pendingJobs = await getJobs();
+  try {
+    logger.info('Initializing RabbitMQ job processor', {
+      concurrency: config.get('job.concurrency'),
+      service: 'jobProcessor'
+    });
 
-      if (pendingJobs.success && pendingJobs.jobs.length > 0) {
-        const batches = chunk(pendingJobs.jobs, CONCURRENCY);
+    // Connect to RabbitMQ and setup queues
+    await rabbitmq.connect();
 
-        logger.debug('Processing job batches', {
-          totalJobs: pendingJobs.jobs.length,
-          batchCount: batches.length,
-          concurrency: CONCURRENCY
+    let globalJobCounter = 0; // Track job counter for demo purposes
+
+    // Start consuming jobs from RabbitMQ queue
+    await rabbitmq.consumeJobs(async (jobData, metadata) => {
+      const { jobId, retryCount, msg } = metadata;
+
+      globalJobCounter++;
+
+      logger.info('Processing job from RabbitMQ', {
+        jobId,
+        retryCount,
+        jobCounter: globalJobCounter,
+        jobName: jobData.name
+      });
+
+      try {
+        // Process the job using the existing handler
+        // The handler will update DB status and emit WebSocket events
+        await JobHandler.processJob(jobData, globalJobCounter);
+
+        logger.info('Job processed successfully', {
+          jobId,
+          jobCounter: globalJobCounter
         });
 
-        for (const batch of batches) {
-          await Promise.all(
-            batch.map((job) => {
-              globalJobCounter++;
-              return JobHandler.leaseJobs(job, globalJobCounter);
-            })
-          );
-        }
-      } else {
-        // Add delay when no jobs are pending to prevent database hammering
-        const pollingDelay = config.get('job.pollingDelay');
-        await new Promise(resolve => setTimeout(resolve, pollingDelay));
+      } catch (error) {
+        logger.error('Job processing failed in consumer', error, {
+          jobId,
+          retryCount,
+          jobCounter: globalJobCounter
+        });
+
+        // Re-throw to let RabbitMQ connection handle retry/DLQ logic
+        throw error;
       }
-    } catch (error) {
-      logger.error('Error in job processor loop', error, {
-        service: 'jobProcessor'
-      });
-      // Wait before retrying to prevent rapid error loops
-      const errorRetryDelay = config.get('job.errorRetryDelay');
-      await new Promise(resolve => setTimeout(resolve, errorRetryDelay));
-    }
+    });
+
+    logger.info('RabbitMQ job processor started successfully');
+
+    // Handle graceful shutdown
+    process.on('SIGTERM', async () => {
+      logger.info('SIGTERM received, closing RabbitMQ connection');
+      await rabbitmq.close();
+      process.exit(0);
+    });
+
+    process.on('SIGINT', async () => {
+      logger.info('SIGINT received, closing RabbitMQ connection');
+      await rabbitmq.close();
+      process.exit(0);
+    });
+
+  } catch (error) {
+    logger.error('Failed to initialize RabbitMQ job processor', error);
+    // Wait before retrying to prevent rapid restart loops
+    setTimeout(() => {
+      logger.info('Retrying RabbitMQ connection...');
+      initializeJobProcessor();
+    }, 5000);
   }
 };
 

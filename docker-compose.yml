@@ -20,7 +20,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Redis (Queue + Pub/Sub)
+  # Redis (Cache + Pub/Sub)
   redis:
     image: redis:latest
     container_name: queuecraft-redis
@@ -38,6 +38,27 @@ services:
     command: redis-server --appendonly yes
     restart: unless-stopped
 
+  # RabbitMQ (Message Queue)
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: queuecraft-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP protocol
+      - "15672:15672" # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=queuecraft
+      - RABBITMQ_DEFAULT_PASS=queuecraft
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - queuecraft-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # API Server (with WebSocket)
   api:
     build:
@@ -50,6 +71,7 @@ services:
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongodb:27017/queuecraft
       - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://queuecraft:queuecraft@rabbitmq:5672
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
       - PORT=2000
       - FRONTEND_URL=http://localhost:3000
@@ -57,6 +79,8 @@ services:
       mongodb:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - queuecraft-network
@@ -79,11 +103,14 @@ services:
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongodb:27017/queuecraft
       - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://queuecraft:queuecraft@rabbitmq:5672
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
     depends_on:
       mongodb:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - queuecraft-network
@@ -116,6 +143,8 @@ volumes:
   mongodb_data:
     driver: local
   redis_data:
+    driver: local
+  rabbitmq_data:
     driver: local
 
 networks:
