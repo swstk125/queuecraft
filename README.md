@@ -128,6 +128,8 @@ curl -X POST http://localhost:2000/user/create \
 
 ## 🏗️ Architecture
 
+![QueueCraft High-Level Architecture](./queue_craft_arch.png)
+
 ```
 ┌─────────────────────────────────────────────────┐
 │   React Dashboard (localhost:3000)              │
